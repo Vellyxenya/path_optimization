@@ -2,10 +2,12 @@ from PIL import Image, ImageTk
 import tkinter as Tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import simpledialog, messagebox
+from tkinter import LEFT, TOP, X, FLAT, RAISED
 import numpy as np
 from enum import Enum
 import random
 from D_star import DStar
+
 
 class State(Enum):
     S1 = 1
@@ -14,7 +16,7 @@ class State(Enum):
 
 
 # ----------------------------------------------------------------------
-class MainWindow():
+class MainWindow:
 
     # ----------------
     def __init__(self, main):
@@ -25,34 +27,65 @@ class MainWindow():
 
         self.canvas = Tk.Canvas(main, width=self.canvas_width, height=self.canvas_height)
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor=Tk.NW, image=self.photo)
-        self.canvas.grid(row=0, column=1, columnspan=2)
 
-        self.read_file_button = Tk.Button(main, width=12, height=2, text='Read file', command=self.askforfile)
-        self.read_file_button.grid(row=1, column=0)
-        self.write_to_file_button = Tk.Button(main, width=12, height=2, text='Write to file', command=self.save_map)
-        self.write_to_file_button.grid(row=2, column=0)
-        self.write_to_file_button = Tk.Button(main, width=12, height=2, text='Custom Map', command=self.empty_map)
-        self.write_to_file_button.grid(row=3, column=0)
+        # self.read_file_button = Tk.Button(main, width=12, height=2, text='Read file', command=self.askforfile)
+        # self.read_file_button.grid(row=1, column=0)
+        # self.write_to_file_button = Tk.Button(main, width=12, height=2, text='Write to file', command=self.save_map)
+        # self.write_to_file_button.grid(row=2, column=0)
+        # self.write_to_file_button = Tk.Button(main, width=12, height=2, text='Custom Map', command=self.empty_map)
+        # self.write_to_file_button.grid(row=3, column=0)
+
+        self.menu = Tk.Menu(main)
+        self.menu.add_command(label="Read file", command=self.askforfile)
+        self.menu.add_command(label="Write to file", command=self.save_map)
+        self.menu.add_command(label="Custom Map", command=self.empty_map)
+
+        self.toolbar = Tk.Frame(main, relief=RAISED)  # bd=1,
+
+        self.run_button = Tk.Button(self.toolbar, text="Run algorithm", relief=FLAT, command=self.run_algorithm)
+        self.run_button.pack(side=LEFT, padx=2, pady=2)
+        self.step_button = Tk.Button(self.toolbar, text="Step", relief=FLAT, command=self.step)
+        self.step_button.pack(side=LEFT, padx=2, pady=2)
+
+        self.toolbar.pack(side=TOP, fill=X)
+        self.canvas.pack(side=TOP)
+        # self.toolbar.grid(row=0, column=0)
+        # self.canvas.grid(row=1, column=0, columnspan=1)
+
+        main.config(menu=self.menu)
 
         # mouse click on canvas event
         self.canvas.bind("<Button 1>", self.getorigin)
 
-        # self.map = np.array([[1, 2, 0, 0], [3, 4, 0, -3], [4, 10, -2, 0]])
-        # self.map = np.random.randn(8, 8)
-
         # self.map = np.random.randn(10, 10)
         self.map = np.loadtxt("my_empty_map.csv", delimiter=',')
         self.init_map()
-        self.start = (1, self.map_height-2)
-        self.end = (self.map_width-2, 2)
-
         self.reinit_canvas()
+        self.path = None
 
     # ----------------
+
+    def step(self):
+        if self.path:
+            if self.current_position != self.end:
+                self.path_index += 1
+            self.current_position = self.path[self.path_index].get_coos()
+            self.show_current_position()
+
+    def show_current_position(self):
+        self.canvas.delete("current_position")
+        shape_size = 8
+        color = "#cccccc"
+        offset = self.square_size // 2
+        centerX = offset + self.current_position[0] * self.square_size
+        centerY = offset + self.current_position[1] * self.square_size
+        self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
+                                centerX + shape_size, centerY + shape_size, fill=color, tag="current_position")
 
     def run_algorithm(self):
         self.algorithm = DStar(self.map, self.start, self.end)
         self.path = self.algorithm.run()
+        self.path_index = -1
         self.draw_path(self.path)
 
     def draw_path(self, path):
@@ -65,9 +98,9 @@ class MainWindow():
             centerX = offset + x * self.square_size
             centerY = offset + y * self.square_size
             shape_size = 5
-            color="black"
+            color = "black"
             self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
-                                        centerX + shape_size, centerY + shape_size, fill=color, tag="path_points")
+                                    centerX + shape_size, centerY + shape_size, fill=color, tag="path_points")
             self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill=color, tag="path_line")
             centerX0 = centerX
             centerY0 = centerY
@@ -123,8 +156,6 @@ class MainWindow():
         print(File)
         self.map = np.loadtxt(File, delimiter=',')
         self.init_map()
-        self.start = (1, 1)
-        self.end = (self.map_width - 2, self.map_height - 3)
         self.reinit_canvas()
 
     def empty_map(self):
@@ -138,8 +169,6 @@ class MainWindow():
 
         self.map = np.zeros((height, width)) if not randomize else np.random.randn(height, width)
         self.init_map()
-        self.start = (1, 1)
-        self.end = (width - 2, height - 3)
         self.reinit_canvas()
 
     def reinit_canvas(self):
@@ -150,7 +179,7 @@ class MainWindow():
         self.canvas.delete("path_points")
         self.draw_algo_state()
         self.draw_positions()
-        self.run_algorithm()
+        self.show_current_position()
 
     def init_map(self):
         self.map_height, self.map_width = self.map.shape
@@ -162,6 +191,10 @@ class MainWindow():
         for i in range(self.map_height):
             for j in range(self.map_width):
                 self.algo_state_map[i, j] = random.choice(list(State))
+        self.start = (1, 1)
+        self.end = (self.map_width - 2, self.map_height - 3)
+        self.current_position = self.start
+        self.path = None
 
     def save_map(self):
         file_name = asksaveasfilename(parent=root, initialdir="./", title='Save as .csv file')

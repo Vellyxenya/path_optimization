@@ -20,6 +20,12 @@ class DStar:
         def get_coos(self):
             return self.coos
 
+        def get_x(self):
+            return self.coos[0]
+
+        def get_y(self):
+            return self.coos[1]
+
         def set_state(self, state):
             self.state = state
 
@@ -160,8 +166,6 @@ class DStar:
             node.set_k(min(node.get_h(), h_new))
         node.set_h(h_new)
         node.set_state(self.State.OPEN)
-        print(node, node.get_state(), node.get_k())
-        print(self.queue)
         heapq.heappush(self.queue, (node.get_k(), node))
         # sort open list : no need if it s a priority queue
 
