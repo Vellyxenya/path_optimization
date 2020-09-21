@@ -3,6 +3,7 @@ import heapq
 import copy
 import numpy as np
 import math
+import random
 
 class DStar:
 
@@ -96,6 +97,7 @@ class DStar:
                 for (x_n, y_n) in self.get_neighboring_coos(x, y):
                     current_node = self.graph[y][x]
                     cost = 1 if x_n == x or y_n == y else 1.41
+                    cost += random.uniform(-0.01, 0.01) # for some reason, heapq doesn't handle elements with exact same k_value...
                     cost *= (1 + self.heuristic * abs(self.map[y_n][x_n] - self.map[y][x]))
                     current_node.add_neighbor(self.graph[y_n][x_n], cost)
 
@@ -158,6 +160,8 @@ class DStar:
             node.set_k(min(node.get_h(), h_new))
         node.set_h(h_new)
         node.set_state(self.State.OPEN)
+        print(node, node.get_state(), node.get_k())
+        print(self.queue)
         heapq.heappush(self.queue, (node.get_k(), node))
         # sort open list : no need if it s a priority queue
 
@@ -170,8 +174,7 @@ class DStar:
     def init_plan(self):
         while True:
             k_min = self.process_state()
-            print(k_min)
-            print("processing")
+            print("k_min : %s"%(k_min))
             if k_min == -1 or self.current_state == self.State.CLOSED:
                 break
         return self.get_back_pointer_list()

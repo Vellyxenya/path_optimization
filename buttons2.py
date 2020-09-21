@@ -39,19 +39,21 @@ class MainWindow():
 
         # self.map = np.array([[1, 2, 0, 0], [3, 4, 0, -3], [4, 10, -2, 0]])
         # self.map = np.random.randn(8, 8)
-        self.map = np.random.randn(10, 10)
+
+        # self.map = np.random.randn(10, 10)
+        self.map = np.loadtxt("my_empty_map.csv", delimiter=',')
         self.init_map()
+        self.start = (1, self.map_height-2)
+        self.end = (self.map_width-2, 2)
 
-        self.start = (1, 8)
-        self.end = (8, 2)
-        self.draw_algo_state()
-        self.draw_positions()
-
-        algorithm = DStar(self.map, self.start, self.end)
-        path = algorithm.run()
-        self.draw_path(path)
+        self.reinit_canvas()
 
     # ----------------
+
+    def run_algorithm(self):
+        self.algorithm = DStar(self.map, self.start, self.end)
+        self.path = self.algorithm.run()
+        self.draw_path(self.path)
 
     def draw_path(self, path):
         (x_0, y_0) = self.start
@@ -115,17 +117,15 @@ class MainWindow():
         # original = Image.open(File).resize((512, 512))
         # self.photo = ImageTk.PhotoImage(original)
         # self.canvas.itemconfig(self.image_on_canvas, image=self.photo)
-        # self.map = np.loadtxt('my_file.csv', delimiter=',')
+        # self.map = np.loadtxt('my_file1.csv', delimiter=',')
         # print(self.data)
         File = askopenfilename(parent=root, initialdir="./", title='Select a .csv file')
         print(File)
         self.map = np.loadtxt(File, delimiter=',')
         self.init_map()
-        self.canvas.delete("start")
-        self.canvas.delete("end")
-        self.canvas.delete("cell_state")
-        self.draw_algo_state()
-        self.draw_positions()
+        self.start = (1, 1)
+        self.end = (self.map_width - 2, self.map_height - 3)
+        self.reinit_canvas()
 
     def empty_map(self):
         width = simpledialog.askinteger("Width", "Enter Map width",
@@ -140,11 +140,17 @@ class MainWindow():
         self.init_map()
         self.start = (1, 1)
         self.end = (width - 2, height - 3)
+        self.reinit_canvas()
+
+    def reinit_canvas(self):
         self.canvas.delete("start")
         self.canvas.delete("end")
         self.canvas.delete("cell_state")
+        self.canvas.delete("path_line")
+        self.canvas.delete("path_points")
         self.draw_algo_state()
         self.draw_positions()
+        self.run_algorithm()
 
     def init_map(self):
         self.map_height, self.map_width = self.map.shape
