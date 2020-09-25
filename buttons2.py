@@ -145,6 +145,11 @@ class MainWindow:
         self.update_color_map()
 
     def askforfile(self):
+        im = Image.open('test_map.png', 'r')
+        pix_val = list(im.getdata())
+        pixel_val_flat = [aTuple[0] for aTuple in pix_val]
+        self.map = np.asarray(pixel_val_flat).reshape((100, 200))
+
         # File = askopenfilename(parent=root, initialdir="./", title='Select an image')
         # print(File)
         # original = Image.open(File).resize((512, 512))
@@ -152,18 +157,26 @@ class MainWindow:
         # self.canvas.itemconfig(self.image_on_canvas, image=self.photo)
         # self.map = np.loadtxt('my_file1.csv', delimiter=',')
         # print(self.data)
+
         File = askopenfilename(parent=root, initialdir="./", title='Select a .csv file')
         print(File)
         self.map = np.loadtxt(File, delimiter=',')
+
+        print(type(self.map), self.map.shape)
+
+        minVal, maxVal = np.min(self.map), np.max(self.map)
+        print(minVal, maxVal)
+        self.map = (self.map - minVal) / (maxVal - minVal)
+        self.map = (self.map - np.mean(self.map))*2
         self.init_map()
         self.reinit_canvas()
 
     def empty_map(self):
         width = simpledialog.askinteger("Width", "Enter Map width",
-                                        parent=root, minvalue=1, maxvalue=100)
+                                        parent=root, minvalue=1, maxvalue=300)
 
         height = simpledialog.askinteger("Height", "Enter Map height",
-                                         parent=root, minvalue=1, maxvalue=100)
+                                         parent=root, minvalue=1, maxvalue=300)
 
         randomize = messagebox.askyesno("Question", "Random map?")
 

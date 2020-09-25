@@ -91,7 +91,7 @@ class DStar:
         self.current_state = self.start
 
     # how much we penalize taking high cost environment paths
-    heuristic = 10
+    heuristic = 20
 
     def init_nodes(self):
         for y in range(self.height):
