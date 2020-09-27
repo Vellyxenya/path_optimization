@@ -8,7 +8,7 @@ from enum import Enum
 import random
 from D_star import DStar
 from RTT import RTT
-
+import time
 
 class State(Enum):
     S1 = 1
@@ -51,6 +51,10 @@ class MainWindow:
         self.path = None
         self.algorithm = None
         self.sensor_range = 1000
+        self.start = (1, 1)
+        self.end = (self.map_width - 2, self.map_height - 3)
+        self.current_position = self.start
+        self.is_simulation_running = False
 
         self.menu = Tk.Menu(main)
         self.menu.add_command(label="Read file", command=self.askforfile)
@@ -61,10 +65,13 @@ class MainWindow:
         self.slider_bar = Tk.Frame(main, relief=RAISED)
 
         self.run_menu = Tk.Menu(self.menu, tearoff=0)
+
         self.run_menu.add_command(label="D*", command=self.run_algorithm_dstar)
         self.run_menu.add_command(label="RTT", command=self.run_algorithm_rtt)
         self.menu.add_cascade(label="Run Menu", menu=self.run_menu)
         self.menu.add_command(label="Run current", command=self.run_algorithm)
+
+        self.menu.add_command(label="Go to destination", command=self.go_to_destination)
 
         self.step_button = Tk.Button(self.toolbar, text="Step", relief=FLAT, command=self.step)
         self.step_button.pack(side=LEFT, padx=2, pady=2)
@@ -112,22 +119,46 @@ class MainWindow:
         self.heuristic = 20
         self.heuristic_label = Tk.Label(self.slider_bar, text="Heuristic value :")
         self.heuristic_label.pack(side=LEFT, padx=2, pady=2)
-        self.heuristic_slider = Tk.Scale(self.slider_bar, from_=0, to=80, orient=Tk.HORIZONTAL, command=self.broadcast_heuristic_value)
+        self.heuristic_slider = Tk.Scale(self.slider_bar, from_=0, to=80, orient=Tk.HORIZONTAL,
+                                         command=self.broadcast_heuristic_value)
         self.heuristic_slider.set(self.heuristic)
         self.heuristic_slider.pack(side=LEFT, padx=2, pady=2)
+
+        self.simulation_speed = 10
+        self.simulation_speed_label = Tk.Label(self.slider_bar, text="Simulation speed :")
+        self.simulation_speed_label.pack(side=LEFT, padx=2, pady=2)
+        self.simulation_speed_slider = Tk.Scale(self.slider_bar, from_=1, to=20, orient=Tk.HORIZONTAL,
+                                                command=self.broadcast_simulation_speed)
+        self.simulation_speed_slider.set(self.simulation_speed)
+        self.simulation_speed_slider.pack(side=LEFT, padx=2, pady=2)
 
         self.toolbar.pack(side=TOP, fill=X)
         self.slider_bar.pack(side=TOP, fill=X)
         self.canvas.pack(side=TOP)
-        # self.toolbar.grid(row=0, column=0)
-        # self.canvas.grid(row=1, column=0, columnspan=1)
+
+        self.algorithm = DStar(self, self.map, self.start, self.end)
 
         main.config(menu=self.menu)
 
     # ----------------
 
+    def go_to_destination(self):
+        self.is_simulation_running = True
+        self.algorithm = DStar(self, self.map, self.start, self.end)
+        self.run_algorithm()
+        self.menu.update()
+        while self.current_position != self.end and self.is_simulation_running:
+            self.step()
+            self.menu.update()  # necessary otherwise canvas does not update since the call comes from a menu 'command='
+            sleep_time = (2.0/int(self.simulation_speed))
+            time.sleep(sleep_time)
+        self.is_simulation_running = False
+
     def broadcast_heuristic_value(self, value):
         self.heuristic = value
+
+    def broadcast_simulation_speed(self, value):
+        self.simulation_speed = value
 
     def get_heuristic(self):
         return self.heuristic
@@ -166,6 +197,7 @@ class MainWindow:
 
     def clear_path(self):
         self.path = None
+        self.is_simulation_running = False
         self.canvas.delete("path_line")
         self.canvas.delete("path_points")
         self.canvas.delete("current_position")
@@ -184,6 +216,7 @@ class MainWindow:
         offset = self.square_size // 2
         centerX = offset + self.current_position[0] * self.square_size
         centerY = offset + self.current_position[1] * self.square_size
+        print("here", self.current_position[0], self.current_position[1])
         self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
                                 centerX + shape_size, centerY + shape_size, fill=color, tag="current_position")
 
