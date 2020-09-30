@@ -234,8 +234,11 @@ class MainWindow:
                                 centerX + shape_size, centerY + shape_size, fill=color, tag="current_position")
 
     def run_algorithm_rtt(self):
-        self.algorithm = RTT()
-        self.run_algorithm()
+        self.algorithm = RTT(self, self.map, self.start, self.end)
+        # TODO refactor this
+        self.clear_path()
+        self.path = self.algorithm.run(200)
+        self.draw_branch(self.path, PathType.PATH_HISTORY)
 
     def run_algorithm_dstar(self):
         self.algorithm = DStar(self, self.map, self.start, self.end)
@@ -251,6 +254,37 @@ class MainWindow:
         self.draw_path(self.path_history, PathType.PATH_HISTORY)
         #self.current_position = self.start
         self.show_current_position()
+
+    def draw_branch(self, path, path_type):
+        if path_type == PathType.PATH_TO_FOLLOW:
+            color = "black"
+            (x_0, y_0) = self.current_position
+            points_tag = "path_points"
+            line_tag = "path_line"
+        elif path_type == PathType.PATH_HISTORY:
+            color = "green"
+            (x_0, y_0) = self.start
+            points_tag = "history_branch_points"
+            line_tag = "history_branch_line"
+        else:
+            print("Cannot draw unknown path type")
+            return
+        offset = self.square_size // 2
+        centerX0 = offset + x_0 * self.square_size
+        centerY0 = offset + y_0 * self.square_size
+        for node in path:
+            if path_type == PathType.PATH_TO_FOLLOW:
+                (x, y) = (node[0], node[1])
+            elif path_type == PathType.PATH_HISTORY:
+                (x, y) = (node[0], node[1])
+            centerX = offset + x * self.square_size
+            centerY = offset + y * self.square_size
+            shape_size = max(self.square_size // 8, 1)
+            self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
+                                    centerX + shape_size, centerY + shape_size, fill=color, tag=points_tag)
+            self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill=color, tag=line_tag)
+            centerX0 = centerX
+            centerY0 = centerY
 
     def draw_path(self, path, path_type):
         if path_type == PathType.PATH_TO_FOLLOW:
