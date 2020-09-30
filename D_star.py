@@ -69,7 +69,7 @@ class DStar:
             self.neighbors[other] = cost_value
 
         def print_node(self):
-            print("state %s and coos %s and backpointer %s" % (self.state, self.coos, self.b))
+            print("state %s and coos %s and back-pointer %s" % (self.state, self.coos, self.b))
 
     class State(Enum):
         NEW = 0
@@ -179,7 +179,7 @@ class DStar:
     def init_plan(self):
         while True:
             k_min = self.process_state()
-            print("k_min : %s"%(k_min))
+            #print("k_min : %s"%(k_min))
             if k_min == -1 or self.current_state == self.State.CLOSED:
                 break
         return self.get_back_pointer_list()

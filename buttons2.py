@@ -10,6 +10,7 @@ from D_star import DStar
 from RTT import RTT
 import time
 
+
 class State(Enum):
     S1 = 1
     S2 = 2
@@ -19,6 +20,11 @@ class State(Enum):
 class Algos(Enum):
     DSTAR = 1
     RTT = 2
+
+
+class PathType(Enum):
+    PATH_TO_FOLLOW = 1
+    PATH_HISTORY = 2
 
 
 # ----------------------------------------------------------------------
@@ -34,30 +40,28 @@ class MainWindow:
         self.canvas = Tk.Canvas(main, width=self.canvas_width, height=self.canvas_height)
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor=Tk.NW, image=self.photo)
 
-        # self.read_file_button = Tk.Button(main, width=12, height=2, text='Read file', command=self.askforfile)
-        # self.read_file_button.grid(row=1, column=0)
-        # self.write_to_file_button = Tk.Button(main, width=12, height=2, text='Write to file', command=self.save_map)
-        # self.write_to_file_button.grid(row=2, column=0)
-        # self.write_to_file_button = Tk.Button(main, width=12, height=2, text='Custom Map', command=self.empty_map)
-        # self.write_to_file_button.grid(row=3, column=0)
-
         # mouse click on canvas event
         self.canvas.bind("<Button 1>", self.getorigin)
 
         # self.map = np.random.randn(10, 10)
-        self.map = np.loadtxt("my_empty_map.csv", delimiter=',')
+        self.visibility_map = None
+        self.path = None
+        self.path_history = []
+        self.algorithm = None
+        self.sensor_range = 5
+        self.steps_per_cycle = self.sensor_range // 2
+
+        self.map = np.loadtxt("my_file2.csv", delimiter=',')
         self.init_map()
         self.reinit_canvas()
-        self.path = None
-        self.algorithm = None
-        self.sensor_range = 1000
+
         self.start = (1, 1)
         self.end = (self.map_width - 2, self.map_height - 3)
         self.current_position = self.start
         self.is_simulation_running = False
 
         self.menu = Tk.Menu(main)
-        self.menu.add_command(label="Read file", command=self.askforfile)
+        self.menu.add_command(label="Read file", command=self.ask_for_file)
         self.menu.add_command(label="Write to file", command=self.save_map)
         self.menu.add_command(label="Custom Map", command=self.empty_map)
 
@@ -85,22 +89,6 @@ class MainWindow:
                                                      command=self.change_goal_position)
         self.change_goal_position_button.pack(side=LEFT, padx=2, pady=2)
 
-        # self.start_text = Tk.Label(self.toolbar, text="start : (")
-        # self.start_text.pack(side=LEFT, padx=2, pady=2)
-        # self.start_x_field = Tk.Text(self.toolbar, height=1, width=3)
-        # self.start_x_field.pack(side=LEFT, padx=2, pady=2)
-        # self.start_y_field = Tk.Text(self.toolbar, height=1, width=3)
-        # self.start_y_field.pack(side=LEFT, padx=2, pady=2)
-        #
-        # self.goal_text = Tk.Label(self.toolbar, text=") goal : (")
-        # self.goal_text.pack(side=LEFT, padx=2, pady=2)
-        # self.goal_x_field = Tk.Text(self.toolbar, height=1, width=3)
-        # self.goal_x_field.pack(side=LEFT, padx=2, pady=2)
-        # self.goal_y_field = Tk.Text(self.toolbar, height=1, width=3)
-        # self.goal_y_field.pack(side=LEFT, padx=2, pady=2)
-        # self.closing_bracket_text = Tk.Label(self.toolbar, text=")")
-        # self.closing_bracket_text.pack(side=LEFT, padx=2, pady=2)
-
         self.use_full_map = Tk.IntVar(value=1)
         self.is_full_map_box = Tk.Checkbutton(self.toolbar, text="Full map", variable=self.use_full_map)
         self.is_full_map_box.pack(side=LEFT, padx=2, pady=2)
@@ -127,7 +115,7 @@ class MainWindow:
         self.simulation_speed = 10
         self.simulation_speed_label = Tk.Label(self.slider_bar, text="Simulation speed :")
         self.simulation_speed_label.pack(side=LEFT, padx=2, pady=2)
-        self.simulation_speed_slider = Tk.Scale(self.slider_bar, from_=1, to=20, orient=Tk.HORIZONTAL,
+        self.simulation_speed_slider = Tk.Scale(self.slider_bar, from_=1, to=300, orient=Tk.HORIZONTAL,
                                                 command=self.broadcast_simulation_speed)
         self.simulation_speed_slider.set(self.simulation_speed)
         self.simulation_speed_slider.pack(side=LEFT, padx=2, pady=2)
@@ -143,16 +131,31 @@ class MainWindow:
     # ----------------
 
     def go_to_destination(self):
+        # self.is_simulation_running = True
+        # self.algorithm = DStar(self, self.map, self.start, self.end)
+        # self.run_algorithm()
+        # self.menu.update()
+        # while self.current_position != self.end and self.is_simulation_running:
+        #     self.step()
+        #     self.menu.update()  # necessary b/c canvas does not update since the call comes from a menu 'command='
+        #     sleep_time = (2.0 / int(self.simulation_speed))
+        #     time.sleep(sleep_time)
+        # self.is_simulation_running = False
+
         self.is_simulation_running = True
-        self.algorithm = DStar(self, self.map, self.start, self.end)
-        self.run_algorithm()
-        self.menu.update()
+
         while self.current_position != self.end and self.is_simulation_running:
-            self.step()
-            self.menu.update()  # necessary otherwise canvas does not update since the call comes from a menu 'command='
-            sleep_time = (2.0/int(self.simulation_speed))
-            time.sleep(sleep_time)
+            self.algorithm = DStar(self, self.height_visibility_map, self.current_position, self.end)
+            self.run_algorithm()
+            for i in range(self.steps_per_cycle):
+                if self.current_position == self.end:
+                    break
+                self.step()
+                self.menu.update()  # necessary otherwise canvas does not update since the call comes from a menu 'command='
+                sleep_time = (2.0 / int(self.simulation_speed))
+                #time.sleep(sleep_time)
         self.is_simulation_running = False
+
 
     def broadcast_heuristic_value(self, value):
         self.heuristic = value
@@ -168,23 +171,31 @@ class MainWindow:
                                             parent=root, minvalue=2, maxvalue=1000)
         self.sensor_range = new_range
         self.sensor_range_label_var.set(new_range)
+        self.update_steps_per_cycle()
+
+    def update_steps_per_cycle(self):
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        self.steps_per_cycle = self.sensor_range // 2
+        print(self.steps_per_cycle)
 
     def change_start_position(self):
         start_x = simpledialog.askinteger("X : ", "Enter new X coordinate",
-                                          parent=root, minvalue=1, maxvalue=self.map_width-1)
+                                          parent=root, minvalue=1, maxvalue=self.map_width - 1)
 
         start_y = simpledialog.askinteger("Y : ", "Enter new Y coordinate",
-                                          parent=root, minvalue=1, maxvalue=self.map_height-1)
+                                          parent=root, minvalue=1, maxvalue=self.map_height - 1)
         self.set_start_position((start_x, start_y))
         self.draw_positions()
         self.show_current_position()
 
     def change_goal_position(self):
         goal_x = simpledialog.askinteger("X : ", "Enter new X coordinate",
-                                         parent=root, minvalue=0, maxvalue=self.map_width-1)
+                                         parent=root, minvalue=0, maxvalue=self.map_width - 1)
 
         goal_y = simpledialog.askinteger("Y : ", "Enter new Y coordinate",
-                                         parent=root, minvalue=0, maxvalue=self.map_height-1)
+                                         parent=root, minvalue=0, maxvalue=self.map_height - 1)
         self.set_goal_position((goal_x, goal_y))
         self.draw_positions()
         self.show_current_position()
@@ -197,7 +208,7 @@ class MainWindow:
 
     def clear_path(self):
         self.path = None
-        self.is_simulation_running = False
+        #self.is_simulation_running = False
         self.canvas.delete("path_line")
         self.canvas.delete("path_points")
         self.canvas.delete("current_position")
@@ -208,6 +219,8 @@ class MainWindow:
                 self.path_index += 1
             self.current_position = self.path[self.path_index].get_coos()
             self.show_current_position()
+            self.update_visibility_map()
+            self.path_history.append(self.current_position)
 
     def show_current_position(self):
         self.canvas.delete("current_position")
@@ -231,26 +244,42 @@ class MainWindow:
     def run_algorithm(self):
         if self.algorithm == None:
             return
+        self.clear_path()
         self.path = self.algorithm.run()
         self.path_index = -1
-        self.draw_path(self.path)
-        self.current_position = self.start
+        self.draw_path(self.path, PathType.PATH_TO_FOLLOW)
+        self.draw_path(self.path_history, PathType.PATH_HISTORY)
+        #self.current_position = self.start
         self.show_current_position()
 
-    def draw_path(self, path):
-        (x_0, y_0) = self.start
+    def draw_path(self, path, path_type):
+        if path_type == PathType.PATH_TO_FOLLOW:
+            color = "black"
+            (x_0, y_0) = self.current_position
+            points_tag = "path_points"
+            line_tag = "path_line"
+        elif path_type == PathType.PATH_HISTORY:
+            color = "green"
+            (x_0, y_0) = self.start
+            points_tag = "history_path_points"
+            line_tag = "history_path_line"
+        else:
+            print("Cannot draw unknown path type")
+            return
         offset = self.square_size // 2
         centerX0 = offset + x_0 * self.square_size
         centerY0 = offset + y_0 * self.square_size
         for node in path:
-            (x, y) = node.get_coos()
+            if path_type == PathType.PATH_TO_FOLLOW:
+                (x, y) = node.get_coos()
+            elif path_type == PathType.PATH_HISTORY:
+                (x, y) = (node[0], node[1])
             centerX = offset + x * self.square_size
             centerY = offset + y * self.square_size
             shape_size = max(self.square_size // 8, 1)
-            color = "black"
             self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
-                                    centerX + shape_size, centerY + shape_size, fill=color, tag="path_points")
-            self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill=color, tag="path_line")
+                                    centerX + shape_size, centerY + shape_size, fill=color, tag=points_tag)
+            self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill=color, tag=line_tag)
             centerX0 = centerX
             centerY0 = centerY
 
@@ -292,14 +321,10 @@ class MainWindow:
         self.update_map(square_x, square_y)
 
     def update_map(self, x, y):
-        self.map[y, x] = 4
+        self.map[y, x] = 4  # TODO change this value
         self.update_color_map()
 
-    def askforfile(self):
-        # original = Image.open(File).resize((512, 512))
-        # self.photo = ImageTk.PhotoImage(original)
-        # self.canvas.itemconfig(self.image_on_canvas, image=self.photo)
-
+    def ask_for_file(self):
         File = askopenfilename(parent=root, initialdir="./", title='Select a .csv or .png file')
         print(File)
         extension = File[-4:]
@@ -339,8 +364,10 @@ class MainWindow:
         self.canvas.delete("start")
         self.canvas.delete("end")
         self.canvas.delete("cell_state")
+        self.canvas.delete("history_path_points")
+        self.canvas.delete("history_path_line")
         self.clear_path()
-        self.draw_algo_state()
+        # self.draw_algo_state()
         self.draw_positions()
         self.show_current_position()
 
@@ -349,15 +376,25 @@ class MainWindow:
         self.square_size = int(min(self.canvas_width / self.map_width,
                                    self.canvas_height / self.map_height))
         self.color_map = np.zeros((self.map_height, self.map_width, 3), np.uint8)
-        self.update_color_map()
-        self.algo_state_map = np.zeros((self.map_height, self.map_width), State)
-        for i in range(self.map_height):
-            for j in range(self.map_width):
-                self.algo_state_map[i, j] = random.choice(list(State))
         self.start = (1, 1)
         self.end = (self.map_width - 2, self.map_height - 3)
         self.current_position = self.start
         self.path = None
+        self.path_history = []
+        self.visibility_map = np.zeros((self.map_height, self.map_width), bool)
+        self.update_visibility_map()
+        self.algo_state_map = np.zeros((self.map_height, self.map_width), State)
+        for i in range(self.map_height):
+            for j in range(self.map_width):
+                self.algo_state_map[i, j] = random.choice(list(State))
+
+    def update_visibility_map(self):
+        range_squared = self.sensor_range**2
+        for y in range(self.map_height):
+            for x in range(self.map_width):
+                if (x - self.current_position[0])**2 + (y - self.current_position[1])**2 <= range_squared:
+                    self.visibility_map[y, x] = True
+        self.update_color_map()
 
     def save_map(self):
         file_name = asksaveasfilename(parent=root, initialdir="./", title='Save as .csv file')
@@ -368,16 +405,18 @@ class MainWindow:
         max_height = np.max(self.map)
         min_height = np.min(self.map)
         extreme_value = max(abs(max_height), abs(min_height))
+        self.height_visibility_map = self.map * self.visibility_map
         for i in range(self.map_height):
             for j in range(self.map_width):
-                self.color_map[i, j] = self.map_height_to_color(self.map[i, j], extreme_value)
+                self.color_map[i, j] = self.map_height_to_color(self.height_visibility_map[i, j], extreme_value)
         image = Image.fromarray(self.color_map)
         resized_image = image.resize((self.map_width * self.square_size, self.map_height * self.square_size),
                                      Image.NEAREST)
         self.photo = ImageTk.PhotoImage(resized_image)
         self.canvas.itemconfig(self.image_on_canvas, image=self.photo)
 
-    def map_height_to_color(self, height, extreme_value):
+    @staticmethod
+    def map_height_to_color(height, extreme_value):
         val = 255.0 / extreme_value if extreme_value != 0 else 0
         ratio = height * val
         return (255 - abs(int(ratio)), 255 - abs(int(ratio)), 255) if height < 0 else (
