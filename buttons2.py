@@ -153,9 +153,8 @@ class MainWindow:
                 self.step()
                 self.menu.update()  # necessary otherwise canvas does not update since the call comes from a menu 'command='
                 sleep_time = (2.0 / int(self.simulation_speed))
-                #time.sleep(sleep_time)
+                # time.sleep(sleep_time)
         self.is_simulation_running = False
-
 
     def broadcast_heuristic_value(self, value):
         self.heuristic = value
@@ -208,10 +207,14 @@ class MainWindow:
 
     def clear_path(self):
         self.path = None
-        #self.is_simulation_running = False
+        # self.is_simulation_running = False
         self.canvas.delete("path_line")
         self.canvas.delete("path_points")
         self.canvas.delete("current_position")
+        self.canvas.delete("history_branch_points")
+        self.canvas.delete("history_branch_line")
+        self.canvas.delete("tree_nodes")
+        self.canvas.delete("tree_branches")
 
     def step(self):
         if self.path:
@@ -237,7 +240,8 @@ class MainWindow:
         self.algorithm = RTT(self, self.map, self.start, self.end)
         # TODO refactor this
         self.clear_path()
-        self.path = self.algorithm.run(200)
+        self.path, self.tree = self.algorithm.run(3800)
+        self.draw_tree(self.tree)
         self.draw_branch(self.path, PathType.PATH_HISTORY)
 
     def run_algorithm_dstar(self):
@@ -252,7 +256,7 @@ class MainWindow:
         self.path_index = -1
         self.draw_path(self.path, PathType.PATH_TO_FOLLOW)
         self.draw_path(self.path_history, PathType.PATH_HISTORY)
-        #self.current_position = self.start
+        # self.current_position = self.start
         self.show_current_position()
 
     def draw_branch(self, path, path_type):
@@ -269,7 +273,7 @@ class MainWindow:
         else:
             print("Cannot draw unknown path type")
             return
-        offset = self.square_size // 2
+        offset = 0  # self.square_size // 2
         centerX0 = offset + x_0 * self.square_size
         centerY0 = offset + y_0 * self.square_size
         for node in path:
@@ -285,6 +289,23 @@ class MainWindow:
             self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill=color, tag=line_tag)
             centerX0 = centerX
             centerY0 = centerY
+
+    def draw_tree(self, tree: RTT.Tree):
+        self.canvas.delete("tree_nodes")
+        self.canvas.delete("tree_branches")
+        offset = 0  # self.square_size // 2
+        for i in range(tree.nb_nodes):
+            centerX = offset + tree.xs[i] * self.square_size
+            centerY = offset + tree.ys[i] * self.square_size
+            shape_size = max(self.square_size // 10, 1)
+            coos_parent = tree.get_node(tree.parents[i])
+            centerX0 = offset + self.square_size * coos_parent[0]
+            centerY0 = offset + self.square_size * coos_parent[1]
+            self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
+                                    centerX + shape_size, centerY + shape_size, fill="#f68a41", tag="tree_nodes")
+            self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill="#f68a41", tag="tree_branches")
+        self.menu.update()
+        #time.sleep(2)
 
     def draw_path(self, path, path_type):
         if path_type == PathType.PATH_TO_FOLLOW:
@@ -400,6 +421,10 @@ class MainWindow:
         self.canvas.delete("cell_state")
         self.canvas.delete("history_path_points")
         self.canvas.delete("history_path_line")
+        self.canvas.delete("history_branch_points")
+        self.canvas.delete("history_branch_line")
+        self.canvas.delete("tree_nodes")
+        self.canvas.delete("tree_branches")
         self.clear_path()
         # self.draw_algo_state()
         self.draw_positions()
@@ -423,10 +448,10 @@ class MainWindow:
                 self.algo_state_map[i, j] = random.choice(list(State))
 
     def update_visibility_map(self):
-        range_squared = self.sensor_range**2
+        range_squared = self.sensor_range ** 2
         for y in range(self.map_height):
             for x in range(self.map_width):
-                if (x - self.current_position[0])**2 + (y - self.current_position[1])**2 <= range_squared:
+                if (x - self.current_position[0]) ** 2 + (y - self.current_position[1]) ** 2 <= range_squared:
                     self.visibility_map[y, x] = True
         self.update_color_map()
 
@@ -439,7 +464,7 @@ class MainWindow:
         max_height = np.max(self.map)
         min_height = np.min(self.map)
         extreme_value = max(abs(max_height), abs(min_height))
-        self.height_visibility_map = self.map * self.visibility_map
+        self.height_visibility_map = self.map * self.visibility_map  # TODO  comment the last part out to display the whole map
         for i in range(self.map_height):
             for j in range(self.map_width):
                 self.color_map[i, j] = self.map_height_to_color(self.height_visibility_map[i, j], extreme_value)

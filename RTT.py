@@ -30,8 +30,8 @@ class RTT:
             return np.sqrt((n1[0] - n2[0])**2 + (n1[1] - n2[1])**2)
 
         def near(self, coos):
-            gamma = 10
-            search_radius = gamma * math.sqrt(math.log(self.nb_nodes)/self.nb_nodes)
+            gamma = 20
+            search_radius = gamma * math.sqrt(math.log(self.nb_nodes)**2/self.nb_nodes)
             node_indices = []
             node_distances = []
             for i in range(self.nb_nodes):
@@ -40,6 +40,7 @@ class RTT:
                 if dist < search_radius:
                     node_indices.append(i)
                     node_distances.append(dist)
+            # print("Number of near nodes :", len(node_indices))
             return node_indices, node_distances
 
         def get_node(self, index):
@@ -49,8 +50,16 @@ class RTT:
         def get_cost(self, index):
             return self.costs[index]
 
-        def rewire(self, a, b, c):
-            pass
+        def rewire(self, z_near_indices, z_min_index, z_new_index):
+            # TODO check if collision free
+            for i in z_near_indices:
+                coos_i = (self.xs[i], self.ys[i])
+                coos_new = (self.xs[z_new_index], self.ys[z_new_index])
+                new_potential_cost = self.get_cost(z_new_index) + self.dist(coos_i, coos_new)
+                if self.get_cost(i) > new_potential_cost:
+                    # print("REWIRED")
+                    self.parents[i] = z_new_index
+                    self.costs[i] = new_potential_cost
 
         def insert_node(self, parent_index, coos):
             self.xs.append(coos[0])
@@ -83,43 +92,55 @@ class RTT:
         #         return self.coos
 
     def __init__(self, parent, elevation_map, start_coos, goal_cos):
+        self.parent = parent
         self.map = elevation_map
         self.height, self.width = self.map.shape
         self.start = start_coos
         self.goal = goal_cos
         self.T = self.initialize_tree()
         self.goal_found = False
-        self.goal_threshold = 0.3
+        self.goal_threshold = 5 # 5 # 0.3
         self.temp_final = None
 
     def run(self, max_iter):
         i = 0
         final_index = None
+        min_dist_to_goal = 1000000
         while i < max_iter or not self.goal_found:
             z_rand = self.sample()
+            # print("z_rand :", z_rand)
             z_nearest_index = self.T.nearest(z_rand)
+            # print("z_nearest_index :", z_nearest_index)
             z_new = self.steer(z_nearest_index, z_rand)
             if self.obstacle_free(z_new, z_new):  # TODO this method is bs for now
                 z_near_indices, distances = self.T.near(z_new)
+                # print(z_near_indices)
                 z_min_index = self.choose_parent(z_near_indices, distances, z_nearest_index, z_new)
+                # print(z_min_index)
                 z_new_index = self.T.insert_node(z_min_index, z_new)
-                # self.T.rewire(z_near, z_min, z_new)  # TODO implement this
-                if self.is_goal_reached(z_new):
+                self.T.rewire(z_near_indices, z_min_index, z_new_index)
+                dist, is_reached = self.is_goal_reached(z_new)
+                if dist < min_dist_to_goal and is_reached:
                     final_index = z_new_index
+                    min_dist_to_goal = dist
                     print("Goal found in %d iterations" % i)
             i += 1
+            if i % 100 == 0:
+                print("iteration :", i)
+            self.parent.draw_tree(self.T)
         if not self.goal_found:
             print("Terminated without finding goal")
-            return None
+            return None, self.T
         else:
             path = self.T.reconstruct_path(final_index)
-            return path
+            return path, self.T
 
     def is_goal_reached(self, z_new):
-        if not self.goal_found and self.distance(z_new, self.goal) < self.goal_threshold:
+        dist = self.distance(z_new, self.goal)
+        if not self.goal_found and dist < self.goal_threshold:
             self.goal_found = True
             print(">>>>>>>>>>>>>>>>>GOAL FOUND<<<<<<<<<<<<<<<<<<<<")
-        return self.goal_found
+        return dist, self.goal_found
 
     def choose_parent(self, z_near_indices, distances, z_nearest, z_new):
         if not z_near_indices:
@@ -139,17 +160,22 @@ class RTT:
         return True
 
     def steer(self, z_nearest_index, z_rand):
-        max_dist = 1
+        max_dist = 1  # TODO 0.5
         z_nearest = self.T.get_node(z_nearest_index)
         distance = self.distance(z_nearest, z_rand)
         if distance < max_dist:
             return z_rand
         else:
-            ratio = max_dist / distance
             dx = z_rand[0] - z_nearest[0]
             dy = z_rand[1] - z_nearest[1]
-            new_x = z_nearest[0] + ratio * dx
-            new_y = z_nearest[1] + ratio * dy
+            angle = math.atan2(dy, dx)
+            new_x = z_nearest[0] + max_dist * math.cos(angle)
+            new_y = z_nearest[1] + max_dist * math.sin(angle)
+            # ratio = max_dist / distance
+            # dx = z_rand[0] - z_nearest[0]
+            # dy = z_rand[1] - z_nearest[1]
+            # new_x = z_nearest[0] + ratio * dx
+            # new_y = z_nearest[1] + ratio * dy
             new_coos = (new_x, new_y)
             return new_coos
 
@@ -158,9 +184,13 @@ class RTT:
         return math.sqrt((z2[0] - z1[0]) ** 2 + (z2[1] - z1[1]) ** 2)
 
     def sample(self):
-        x = random.uniform(0, 1) * self.width
-        y = random.uniform(0, 1) * self.height
-        coos = (x, y)
+        # theta = random.uniform(0, math.pi/2)
+        # d = random.uniform(0, math.sqrt(2))
+        # x = d * math.cos(theta)
+        # y = d * math.sin(theta)
+        x = random.uniform(0, 1)
+        y = random.uniform(0, 1)
+        coos = (x * self.width, y * self.height)
         return coos
 
     def initialize_tree(self):
