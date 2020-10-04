@@ -2,8 +2,11 @@ import random
 import math
 import numpy as np
 
-class RTT:
+from rtree import index
+from rtree import Rtree
 
+
+class RTT:
     class Tree:
 
         def __init__(self, start):
@@ -13,6 +16,8 @@ class RTT:
             self.costs = [0.0]
             self.parents = [0]
             self.nb_nodes = 1
+            self.idx = index.Index()
+            self.idx.insert(0, (float(start[0]), float(start[1]), float(start[0]), float(start[1])))
 
         def nearest(self, coos):
             min_dist = 1000000
@@ -27,21 +32,24 @@ class RTT:
             return min_node
 
         def dist(self, n1, n2):
-            return np.sqrt((n1[0] - n2[0])**2 + (n1[1] - n2[1])**2)
+            return np.sqrt((n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2)
 
         def near(self, coos):
             gamma = 20
-            search_radius = gamma * math.sqrt(math.log(self.nb_nodes)**2/self.nb_nodes)
-            node_indices = []
-            node_distances = []
-            for i in range(self.nb_nodes):
-                x, y = self.xs[i], self.ys[i]
-                dist = self.dist(coos, (x, y))  # TODO change metric
-                if dist < search_radius:
-                    node_indices.append(i)
-                    node_distances.append(dist)
+            # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
+            search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
+            # node_indices = []
+            # node_distances = []  # TODO remove this
+            node_indices = list(self.idx.intersection((coos[0] - search_radius, coos[1] - search_radius,
+                                                       coos[0] + search_radius, coos[1] + search_radius)))
+            # for i in range(self.nb_nodes):
+            #     x, y = self.xs[i], self.ys[i]
+            #     dist = self.dist(coos, (x, y))  # TODO change metric
+            #     if dist < search_radius:
+            #         node_indices.append(i)
+            #         node_distances.append(dist)
             # print("Number of near nodes :", len(node_indices))
-            return node_indices, node_distances
+            return node_indices  # , node_distances
 
         def get_node(self, index):
             node = (self.xs[index], self.ys[index])
@@ -67,6 +75,7 @@ class RTT:
             self.parents.append(parent_index)
             cost = self.get_cost(parent_index) + self.dist(coos, self.get_node(parent_index))
             self.costs.append(cost)
+            self.idx.insert(self.nb_nodes, (coos[0], coos[1], coos[0], coos[1]))  # insert in RTree
             self.nb_nodes += 1
             return self.nb_nodes - 1
 
@@ -99,7 +108,7 @@ class RTT:
         self.goal = goal_cos
         self.T = self.initialize_tree()
         self.goal_found = False
-        self.goal_threshold = 5 # 5 # 0.3
+        self.goal_threshold = 5  # 5 # 0.3
         self.temp_final = None
 
     def run(self, max_iter):
@@ -113,9 +122,9 @@ class RTT:
             # print("z_nearest_index :", z_nearest_index)
             z_new = self.steer(z_nearest_index, z_rand)
             if self.obstacle_free(z_new, z_new):  # TODO this method is bs for now
-                z_near_indices, distances = self.T.near(z_new)
+                z_near_indices = self.T.near(z_new)
                 # print(z_near_indices)
-                z_min_index = self.choose_parent(z_near_indices, distances, z_nearest_index, z_new)
+                z_min_index = self.choose_parent(z_near_indices, z_nearest_index, z_new)
                 # print(z_min_index)
                 z_new_index = self.T.insert_node(z_min_index, z_new)
                 self.T.rewire(z_near_indices, z_min_index, z_new_index)
@@ -127,7 +136,7 @@ class RTT:
             i += 1
             if i % 100 == 0:
                 print("iteration :", i)
-            self.parent.draw_tree(self.T)
+            #self.parent.draw_tree(self.T)
         if not self.goal_found:
             print("Terminated without finding goal")
             return None, self.T
@@ -142,14 +151,15 @@ class RTT:
             print(">>>>>>>>>>>>>>>>>GOAL FOUND<<<<<<<<<<<<<<<<<<<<")
         return dist, self.goal_found
 
-    def choose_parent(self, z_near_indices, distances, z_nearest, z_new):
+    def choose_parent(self, z_near_indices, z_nearest, z_new):
         if not z_near_indices:
             return z_nearest
         else:
             min_dist = 1000000
             z_min_index = None
-            for i, node_index in enumerate(z_near_indices):
-                dist = distances[i] + self.T.get_cost(node_index)
+            for node_index in z_near_indices:
+                dist_to_node = self.distance(self.T.get_node(node_index), z_new)
+                dist = dist_to_node + self.T.get_cost(node_index)
                 if dist < min_dist:
                     min_dist = dist
                     z_min_index = node_index
@@ -171,11 +181,6 @@ class RTT:
             angle = math.atan2(dy, dx)
             new_x = z_nearest[0] + max_dist * math.cos(angle)
             new_y = z_nearest[1] + max_dist * math.sin(angle)
-            # ratio = max_dist / distance
-            # dx = z_rand[0] - z_nearest[0]
-            # dy = z_rand[1] - z_nearest[1]
-            # new_x = z_nearest[0] + ratio * dx
-            # new_y = z_nearest[1] + ratio * dy
             new_coos = (new_x, new_y)
             return new_coos
 
