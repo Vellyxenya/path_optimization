@@ -34,7 +34,7 @@ class MainWindow:
     def __init__(self, main):
         self.image = Image.open("Resources/lena.png")
         self.photo = ImageTk.PhotoImage(self.image)
-        self.canvas_width = 800
+        self.canvas_width = 1024
         self.canvas_height = 800
 
         self.canvas = Tk.Canvas(main, width=self.canvas_width, height=self.canvas_height)
@@ -50,15 +50,6 @@ class MainWindow:
         self.algorithm = None
         self.sensor_range = 5
         self.steps_per_cycle = self.sensor_range // 2
-
-        self.map = np.loadtxt("my_file2.csv", delimiter=',')
-        self.init_map()
-        self.reinit_canvas()
-
-        self.start = (1, 1)
-        self.end = (self.map_width - 2, self.map_height - 3)
-        self.current_position = self.start
-        self.is_simulation_running = False
 
         self.menu = Tk.Menu(main)
         self.menu.add_command(label="Read file", command=self.ask_for_file)
@@ -90,7 +81,8 @@ class MainWindow:
         self.change_goal_position_button.pack(side=LEFT, padx=2, pady=2)
 
         self.use_full_map = Tk.IntVar(value=1)
-        self.is_full_map_box = Tk.Checkbutton(self.toolbar, text="Full map", variable=self.use_full_map)
+        self.is_full_map_box = Tk.Checkbutton(self.toolbar, text="Full map", variable=self.use_full_map,
+                                              command=self.update_color_map)
         self.is_full_map_box.pack(side=LEFT, padx=2, pady=2)
         self.use_dynamic_mode = Tk.IntVar(value=0)
         self.use_dynamic_mode_box = Tk.Checkbutton(self.toolbar, text="Dynamic mode", variable=self.use_dynamic_mode)
@@ -123,6 +115,15 @@ class MainWindow:
         self.toolbar.pack(side=TOP, fill=X)
         self.slider_bar.pack(side=TOP, fill=X)
         self.canvas.pack(side=TOP)
+
+        self.map = np.loadtxt("my_file2.csv", delimiter=',')
+        self.init_map()
+        self.reinit_canvas()
+
+        self.start = (1, 1)
+        self.end = (self.map_width - 2, self.map_height - 3)
+        self.current_position = self.start
+        self.is_simulation_running = False
 
         self.algorithm = DStar(self, self.map, self.start, self.end)
 
@@ -173,7 +174,6 @@ class MainWindow:
         self.update_steps_per_cycle()
 
     def update_steps_per_cycle(self):
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         self.steps_per_cycle = self.sensor_range // 2
@@ -232,7 +232,6 @@ class MainWindow:
         offset = self.square_size // 2
         centerX = offset + self.current_position[0] * self.square_size
         centerY = offset + self.current_position[1] * self.square_size
-        print("here", self.current_position[0], self.current_position[1])
         self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
                                 centerX + shape_size, centerY + shape_size, fill=color, tag="current_position")
 
@@ -245,7 +244,7 @@ class MainWindow:
         self.draw_branch(self.path, PathType.PATH_HISTORY)
 
     def run_algorithm_dstar(self):
-        self.algorithm = DStar(self, self.map, self.start, self.end)
+        self.algorithm = DStar(self, self.height_visibility_map, self.start, self.end)
         self.run_algorithm()
 
     def run_algorithm(self):
@@ -385,11 +384,14 @@ class MainWindow:
         extension = File[-4:]
         if extension == ".csv":
             self.map = np.loadtxt(File, delimiter=',')
-        elif extension == ".png":
+        elif extension == ".png" or extension == ".jpg":
             im = Image.open(File, 'r')
             im_height = im.size[1]
             pix_val = list(im.getdata())
-            pixel_val_flat = [aTuple[0] for aTuple in pix_val]
+            if type(pix_val[0]) == tuple:
+                pixel_val_flat = [aTuple[0] for aTuple in pix_val]
+            else:
+                pixel_val_flat = pix_val
             self.map = np.asarray(pixel_val_flat).reshape((im_height, -1))
             print("image size : ", im.size)
 
@@ -432,8 +434,8 @@ class MainWindow:
 
     def init_map(self):
         self.map_height, self.map_width = self.map.shape
-        self.square_size = int(min(self.canvas_width / self.map_width,
-                                   self.canvas_height / self.map_height))
+        self.square_size = max(1, int(min(self.canvas_width / self.map_width,
+                                   self.canvas_height / self.map_height)))
         self.color_map = np.zeros((self.map_height, self.map_width, 3), np.uint8)
         self.start = (1, 1)
         self.end = (self.map_width - 2, self.map_height - 3)
@@ -460,16 +462,24 @@ class MainWindow:
         print(file_name)
         np.savetxt(file_name, np.asarray(self.map), delimiter=',', fmt='%.1e')
 
+    def update_height_visibility_map(self):
+        if self.use_full_map.get() == 0:
+            self.height_visibility_map = self.map * self.visibility_map  # TODO  comment the last part out to display the whole map
+        else:
+            self.height_visibility_map = self.map
+        self.menu.update()
+
     def update_color_map(self):
         max_height = np.max(self.map)
         min_height = np.min(self.map)
         extreme_value = max(abs(max_height), abs(min_height))
-        self.height_visibility_map = self.map * self.visibility_map  # TODO  comment the last part out to display the whole map
+        self.update_height_visibility_map()
         for i in range(self.map_height):
             for j in range(self.map_width):
                 self.color_map[i, j] = self.map_height_to_color(self.height_visibility_map[i, j], extreme_value)
         image = Image.fromarray(self.color_map)
-        resized_image = image.resize((self.map_width * self.square_size, self.map_height * self.square_size),
+        print("square size : ", self.square_size)
+        resized_image = image.resize((self.map_width * max(1, self.square_size), self.map_height * max(1, self.square_size)),
                                      Image.NEAREST)
         self.photo = ImageTk.PhotoImage(resized_image)
         self.canvas.itemconfig(self.image_on_canvas, image=self.photo)
