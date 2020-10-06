@@ -239,7 +239,7 @@ class MainWindow:
         self.algorithm = RTT(self, self.map, self.start, self.end)
         # TODO refactor this
         self.clear_path()
-        self.path, self.tree = self.algorithm.run(3000)
+        self.path, self.tree = self.algorithm.run(1000)
         self.draw_tree(self.tree)
         self.draw_branch(self.path, PathType.PATH_HISTORY)
 

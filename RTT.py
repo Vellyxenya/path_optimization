@@ -3,14 +3,14 @@ import math
 import numpy as np
 
 from rtree import index
-from rtree import Rtree
 
 
 class RTT:
     class Tree:
 
-        def __init__(self, start):
+        def __init__(self, parent, start):
             # self.root = self.Node(None, start)
+            self.rrt = parent
             self.xs = [float(start[0])]
             self.ys = [float(start[1])]
             self.costs = [0.0]
@@ -25,31 +25,22 @@ class RTT:
             # for (x, y) in zip(self.xs, self.ys):
             for i in range(self.nb_nodes):
                 x, y = self.xs[i], self.ys[i]
-                dist = self.dist(coos, (x, y))  # TODO change metric
+                dist = self.rrt.metric(coos, (x, y))  # self.dist(coos, (x, y))  # TODO change metric
                 if dist < min_dist:
                     min_dist = dist
                     min_node = i
             return min_node
 
-        def dist(self, n1, n2):
-            return np.sqrt((n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2)
+        # def metric(self, n1, n2):
+        # return np.sqrt((n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2)
 
         def near(self, coos):
-            gamma = 20
+            gamma = 8
             # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
             search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
-            # node_indices = []
-            # node_distances = []  # TODO remove this
             node_indices = list(self.idx.intersection((coos[0] - search_radius, coos[1] - search_radius,
                                                        coos[0] + search_radius, coos[1] + search_radius)))
-            # for i in range(self.nb_nodes):
-            #     x, y = self.xs[i], self.ys[i]
-            #     dist = self.dist(coos, (x, y))  # TODO change metric
-            #     if dist < search_radius:
-            #         node_indices.append(i)
-            #         node_distances.append(dist)
-            # print("Number of near nodes :", len(node_indices))
-            return node_indices  # , node_distances
+            return node_indices
 
         def get_node(self, index):
             node = (self.xs[index], self.ys[index])
@@ -63,7 +54,7 @@ class RTT:
             for i in z_near_indices:
                 coos_i = (self.xs[i], self.ys[i])
                 coos_new = (self.xs[z_new_index], self.ys[z_new_index])
-                new_potential_cost = self.get_cost(z_new_index) + self.dist(coos_i, coos_new)
+                new_potential_cost = self.get_cost(z_new_index) + self.rrt.metric(coos_i, coos_new)
                 if self.get_cost(i) > new_potential_cost:
                     # print("REWIRED")
                     self.parents[i] = z_new_index
@@ -73,7 +64,7 @@ class RTT:
             self.xs.append(coos[0])
             self.ys.append(coos[1])
             self.parents.append(parent_index)
-            cost = self.get_cost(parent_index) + self.dist(coos, self.get_node(parent_index))
+            cost = self.get_cost(parent_index) + self.rrt.metric(coos, self.get_node(parent_index))
             self.costs.append(cost)
             self.idx.insert(self.nb_nodes, (coos[0], coos[1], coos[0], coos[1]))  # insert in RTree
             self.nb_nodes += 1
@@ -110,6 +101,7 @@ class RTT:
         self.goal_found = False
         self.goal_threshold = 5  # 5 # 0.3
         self.temp_final = None
+        self.heuristic = 50
 
     def run(self, max_iter):
         i = 0
@@ -136,7 +128,7 @@ class RTT:
             i += 1
             if i % 100 == 0:
                 print("iteration :", i)
-            #self.parent.draw_tree(self.T)
+            # self.parent.draw_tree(self.T)
         if not self.goal_found:
             print("Terminated without finding goal")
             return None, self.T
@@ -145,7 +137,7 @@ class RTT:
             return path, self.T
 
     def is_goal_reached(self, z_new):
-        dist = self.distance(z_new, self.goal)
+        dist = self.metric(z_new, self.goal)
         if not self.goal_found and dist < self.goal_threshold:
             self.goal_found = True
             print(">>>>>>>>>>>>>>>>>GOAL FOUND<<<<<<<<<<<<<<<<<<<<")
@@ -158,7 +150,7 @@ class RTT:
             min_dist = 1000000
             z_min_index = None
             for node_index in z_near_indices:
-                dist_to_node = self.distance(self.T.get_node(node_index), z_new)
+                dist_to_node = self.metric(self.T.get_node(node_index), z_new)
                 dist = dist_to_node + self.T.get_cost(node_index)
                 if dist < min_dist:
                     min_dist = dist
@@ -172,7 +164,7 @@ class RTT:
     def steer(self, z_nearest_index, z_rand):
         max_dist = 1  # TODO 0.5
         z_nearest = self.T.get_node(z_nearest_index)
-        distance = self.distance(z_nearest, z_rand)
+        distance = self.metric(z_nearest, z_rand)
         if distance < max_dist:
             return z_rand
         else:
@@ -184,19 +176,107 @@ class RTT:
             new_coos = (new_x, new_y)
             return new_coos
 
+    def metric(self, z1, z2):
+        euclidean_distance = math.sqrt((z2[0] - z1[0]) ** 2 + (z2[1] - z1[1]) ** 2)
+        traversed_cells = self.get_traversed_cells(z1, z2)
+        cost = 0
+        first_cell = traversed_cells[0]
+        #print("z1 :", z1, "z2 :", z2)
+        #print("traversed cells : ", traversed_cells)
+        for next_cell in traversed_cells[1:]:
+            cost += abs(self.get_cell_height(first_cell) - self.get_cell_height(next_cell))
+            first_cell = next_cell
+        return euclidean_distance * (1 + self.heuristic * cost)
+
     @staticmethod
-    def distance(z1, z2):
-        return math.sqrt((z2[0] - z1[0]) ** 2 + (z2[1] - z1[1]) ** 2)
+    def get_traversed_cells(a, b):
+        a = (int(a[0]), int(a[1]))
+        b = (int(b[0]), int(b[1]))
+        #print("a :", a, "b :", b)
+        dx = b[0] - a[0]
+        dy = b[1] - a[1]
+
+        directionX = np.sign(dx)
+        directionY = np.sign(dy)
+
+        directionModifierX = 0 if directionX < 0 else directionX
+        directionModifierY = 0 if directionY < 0 else directionY
+
+        currentCell = (int(math.floor(a[0])), int(math.floor((a[1]))))
+        targetCell = (math.floor(b[0]), math.floor((b[1])))
+
+        traversed = [currentCell]
+
+        def calcIntersectionDistanceX(): return abs(dy * (currentCell[0] + directionModifierX - a[0]))
+        def calcIntersectionDistanceY(): return abs(dx * (currentCell[1] + directionModifierY - a[1]))
+
+        intersectionDistanceX = float("+inf") if dx == 0 else calcIntersectionDistanceX()
+        intersectionDistanceY = float("+inf") if dy == 0 else calcIntersectionDistanceY()
+
+        it = 0
+        while (targetCell[0] != currentCell[0] or targetCell[1] != currentCell[1]) and it < 5:
+            xMove = intersectionDistanceX < intersectionDistanceY
+            yMove = intersectionDistanceY < intersectionDistanceX
+
+            if xMove:
+                currentCell = (currentCell[0] + directionX, currentCell[1])
+                intersectionDistanceX = calcIntersectionDistanceX()
+
+            if yMove:
+                currentCell = (currentCell[0], currentCell[1] + directionY)
+                intersectionDistanceY = calcIntersectionDistanceY()
+
+            traversed.append((int(currentCell[0]), int(currentCell[1])))
+            it += 1
+
+        return traversed
+
+    # def get_traversed_cells(self, A, B):
+    #     """ Return all cells of the unit grid crossed by the line segment between
+    #         A and B.
+    #     """
+    #
+    #     (xA, yA) = A
+    #     (xB, yB) = B
+    #     (dx, dy) = (xB - xA, yB - yA)
+    #     (sx, sy) = (self.sign(dx), self.sign(dy))
+    #
+    #     grid_A = (math.floor(A[0]), math.floor(A[1]))
+    #     grid_B = (math.floor(B[0]), math.floor(B[1]))
+    #     (x, y) = grid_A
+    #     traversed = [grid_A]
+    #
+    #     tIx = dy * (x + sx - xA) if dx != 0 else float("+inf")
+    #     tIy = dx * (y + sy - yA) if dy != 0 else float("+inf")
+    #
+    #     it = 0
+    #     while (x, y) != grid_B and it < 20:
+    #         # NB if tIx == tIy we increment both x and y
+    #         (movx, movy) = (tIx <= tIy, tIy <= tIx)
+    #
+    #         if movx:
+    #             # intersection is at (x + sx, yA + tIx / dx^2)
+    #             x += sx
+    #             tIx = dy * (x + sx - xA)
+    #
+    #         if movy:
+    #             # intersection is at (xA + tIy / dy^2, y + sy)
+    #             y += sy
+    #             tIy = dx * (y + sy - yA)
+    #
+    #         traversed.append((x, y))
+    #         it += 1
+    #
+    #     return traversed
+
+    def get_cell_height(self, coos):
+        return self.map[coos[1], coos[0]]
 
     def sample(self):
-        # theta = random.uniform(0, math.pi/2)
-        # d = random.uniform(0, math.sqrt(2))
-        # x = d * math.cos(theta)
-        # y = d * math.sin(theta)
         x = random.uniform(0, 1)
         y = random.uniform(0, 1)
         coos = (x * self.width, y * self.height)
         return coos
 
     def initialize_tree(self):
-        return self.Tree(self.start)
+        return self.Tree(self, self.start)
