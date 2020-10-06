@@ -7,7 +7,7 @@ import numpy as np
 from enum import Enum
 import random
 from D_star import DStar
-from RTT import RTT
+from RRT import RRT
 import time
 
 
@@ -62,7 +62,7 @@ class MainWindow:
         self.run_menu = Tk.Menu(self.menu, tearoff=0)
 
         self.run_menu.add_command(label="D*", command=self.run_algorithm_dstar)
-        self.run_menu.add_command(label="RTT", command=self.run_algorithm_rtt)
+        self.run_menu.add_command(label="RRT", command=self.run_algorithm_rtt)
         self.menu.add_cascade(label="Run Menu", menu=self.run_menu)
         self.menu.add_command(label="Run current", command=self.run_algorithm)
 
@@ -236,10 +236,10 @@ class MainWindow:
                                 centerX + shape_size, centerY + shape_size, fill=color, tag="current_position")
 
     def run_algorithm_rtt(self):
-        self.algorithm = RTT(self, self.map, self.start, self.end)
+        self.algorithm = RRT(self, self.map, self.start, self.end)
         # TODO refactor this
         self.clear_path()
-        self.path, self.tree = self.algorithm.run(1000)
+        self.path, self.tree = self.algorithm.run(600)
         self.draw_tree(self.tree)
         self.draw_branch(self.path, PathType.PATH_HISTORY)
 
@@ -289,7 +289,7 @@ class MainWindow:
             centerX0 = centerX
             centerY0 = centerY
 
-    def draw_tree(self, tree: RTT.Tree):
+    def draw_tree(self, tree: RRT.Tree):
         self.canvas.delete("tree_nodes")
         self.canvas.delete("tree_branches")
         offset = 0  # self.square_size // 2

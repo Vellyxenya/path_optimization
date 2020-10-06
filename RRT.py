@@ -5,7 +5,7 @@ import numpy as np
 from rtree import index
 
 
-class RTT:
+class RRT:
     class Tree:
 
         def __init__(self, parent, start):
