@@ -302,7 +302,7 @@ class MainWindow:
             centerY0 = offset + self.square_size * coos_parent[1]
             self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
                                     centerX + shape_size, centerY + shape_size, fill="#f68a41", tag="tree_nodes")
-            self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill="#f68a41", tag="tree_branches")
+            self.canvas.create_line(centerX0, centerY0, centerX, centerY, fill="black", tag="tree_branches")
         self.menu.update()
         #time.sleep(2)
 
