@@ -239,9 +239,12 @@ class MainWindow:
         self.algorithm = RRT(self, self.map, self.start, self.end)
         # TODO refactor this
         self.clear_path()
-        self.path, self.tree = self.algorithm.run(600)
+        self.path, self.tree = self.algorithm.run(3000)  # iterations
         self.draw_tree(self.tree)
-        self.draw_branch(self.path, PathType.PATH_HISTORY)
+        if self.path:
+            self.draw_branch(self.path, PathType.PATH_HISTORY)
+        else:
+            print("No path found, so can't draw path branch")
 
     def run_algorithm_dstar(self):
         self.algorithm = DStar(self, self.height_visibility_map, self.start, self.end)
@@ -265,7 +268,7 @@ class MainWindow:
             points_tag = "path_points"
             line_tag = "path_line"
         elif path_type == PathType.PATH_HISTORY:
-            color = "green"
+            color = "cyan"
             (x_0, y_0) = self.start
             points_tag = "history_branch_points"
             line_tag = "history_branch_line"

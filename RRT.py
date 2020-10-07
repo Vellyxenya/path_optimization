@@ -21,17 +21,19 @@ class RRT:
             self.idx.insert(0, (float(start[0]), float(start[1]), float(start[0]), float(start[1])))
 
         def nearest(self, coos):
-            min_dist = 1000000
-            min_node = None
-            # for (x, y) in zip(self.xs, self.ys):
-            for i in range(self.nb_nodes):  # TODO wtf is this bs, CORRECT THIS!
-                x, y = self.xs[i], self.ys[i]
-                dist = self.rrt.metric(coos, (x, y))
-                if dist < min_dist:
-                    min_dist = dist
-                    min_node = i
-                    # print("min_node :", i)
-            return min_node
+            nearest = list(self.idx.nearest(coos, 1))[0]
+            return nearest
+            # min_dist = 1000000
+            # min_node = None
+            # # for (x, y) in zip(self.xs, self.ys):
+            # for i in range(self.nb_nodes):  # TODO wtf is this bs, CORRECT THIS!
+            #     x, y = self.xs[i], self.ys[i]
+            #     dist = self.rrt.metric(coos, (x, y))
+            #     if dist < min_dist:
+            #         min_dist = dist
+            #         min_node = i
+            #         # print("min_node :", i)
+            # return min_node
 
         # def metric(self, n1, n2):
         # return np.sqrt((n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2)
@@ -39,7 +41,8 @@ class RRT:
         def near(self, coos):
             gamma = 8
             # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
-            search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
+            # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
+            search_radius = 2
             node_indices = list(self.idx.intersection((coos[0] - search_radius, coos[1] - search_radius,
                                                        coos[0] + search_radius, coos[1] + search_radius)))
             # print("near#node_indices :", node_indices)
@@ -93,7 +96,7 @@ class RRT:
                 path.insert(0, self.get_node(iterator))
             print(path)
             return path
-
+optimize nearest neighbor, change goal threshold, change search radius, implement obstacle_free, choose more appropriately between euclidean distance and other metric
     def __init__(self, parent, elevation_map, start_coos, goal_cos):
         self.parent = parent
         self.map = elevation_map
@@ -102,9 +105,12 @@ class RRT:
         self.goal = goal_cos
         self.T = self.initialize_tree()
         self.goal_found = False
-        self.goal_threshold = 1  # 5 # 0.3
+        mean_dim: float = (self.height + self.width)/2
+        self.goal_threshold: float = min(mean_dim/10, 5)
+        # self.goal_threshold = 1  # 5 # 0.3
+
         self.temp_final = None
-        self.heuristic = 50
+        self.heuristic = 100
 
     def run(self, max_iter):
         i = 0
@@ -117,7 +123,7 @@ class RRT:
             z_nearest_index = self.T.nearest(z_rand)
             # print("z_nearest_index :", z_nearest_index)
             z_new = self.steer(z_nearest_index, z_rand)
-            if self.obstacle_free(z_new, z_new):  # TODO this method is bs for now
+            if self.obstacle_free(z_new, z_nearest_index):  # TODO this method is bs for now
                 z_near_indices = self.T.near(z_new)
                 # print("near_indices :", z_near_indices)
                 z_min_index = self.choose_parent(z_near_indices, z_nearest_index, z_new)
@@ -150,8 +156,8 @@ class RRT:
             return path, self.T
 
     def is_goal_reached(self, z_new):
-        print("z_new :", z_new, "goal :", self.goal)
-        dist = self.metric(z_new, self.goal)
+        # dist = self.metric(z_new, self.goal)
+        dist = self.euclidean_distance(z_new, self.goal)
         goal_reached = dist < self.goal_threshold
         if not self.goal_found and goal_reached:
             self.goal_found = True
@@ -164,6 +170,7 @@ class RRT:
         else:
             min_dist = 1000000
             z_min_index = None
+            # print("z_near_indices :", z_near_indices)
             for node_index in z_near_indices:
                 # print("choose_parent#node_index :", node_index, self.T.nb_nodes)
                 dist_to_node = self.metric(self.T.get_node(node_index), z_new)
@@ -173,14 +180,19 @@ class RRT:
                     z_min_index = node_index
             return z_min_index
 
-    @staticmethod
-    def obstacle_free(self, z):
-        return True
+    def obstacle_free(self, z_new, z_nearest_index):
+        z_nearest = self.T.get_node(z_nearest_index)
+        z_nearest_cell = (math.floor(z_nearest[0]), math.floor(z_nearest[1]))
+        z_new_cell = (math.floor(z_new[0]), math.floor(z_new[1]))
+        height_diff = abs(self.get_cell_height(z_nearest_cell) - self.get_cell_height(z_new_cell))
+        # print("height_diff : ", height_diff)
+        return height_diff <= 0.10
 
     def steer(self, z_nearest_index, z_rand):
         max_dist = 1  # TODO 0.5
         z_nearest = self.T.get_node(z_nearest_index)
-        distance = self.metric(z_nearest, z_rand)
+        distance = self.euclidean_distance(z_nearest, z_rand)
+        # print("z_nearest :", z_nearest)
         if distance < max_dist:
             return z_rand
         else:
@@ -192,8 +204,12 @@ class RRT:
             new_coos = (new_x, new_y)
             return new_coos
 
+    @staticmethod
+    def euclidean_distance(z1, z2):
+        return math.sqrt((z2[0] - z1[0]) ** 2 + (z2[1] - z1[1]) ** 2)
+
     def metric(self, z1, z2):
-        euclidean_distance = math.sqrt((z2[0] - z1[0]) ** 2 + (z2[1] - z1[1]) ** 2)
+        euclidean_distance = self.euclidean_distance(z1, z2)
         traversed_cells = self.get_traversed_cells(z1, z2)
         cost = 0
         first_cell = traversed_cells[0]
@@ -247,8 +263,12 @@ class RRT:
 
         return traversed
 
-    def get_cell_height(self, coos):
+    def get_cell_height(self, coos):  # TODO change this there is a bug with the bounds somewhere in traversed_cells
         return self.map[coos[1], coos[0]]
+        # if coos[1] < 30 and coos[0] < 30:
+        #     return self.map[coos[1], coos[0]]
+        # else:
+        #     return 100000
 
     def sample(self):
         x = random.uniform(0, 1)
