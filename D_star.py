@@ -128,7 +128,7 @@ class DStar:
             print("No path found\n")
             return None
         self.print_path()
-        return self.path
+        return self.nodes_as_coos(self.path)
         # Re-planning
         # while self.current_state != self.goal:
         #     self.prepare_repair([])
@@ -142,6 +142,12 @@ class DStar:
         #     # probably do this when getting a notification that the rover
         #     # has moved and is now in a new cell
         # return self.current_state
+
+    def nodes_as_coos(self, path):
+        coos = []
+        for node in path:
+            coos.append(node.get_coos())
+        return coos
 
     def print_path(self):
         for node in self.path:

@@ -9,7 +9,6 @@ class RRT:
     class Tree:
 
         def __init__(self, parent, start):
-            # self.root = self.Node(None, start)
             self.rrt = parent
             self.xs = [float(start[0])]
             self.ys = [float(start[1])]
@@ -23,20 +22,6 @@ class RRT:
         def nearest(self, coos):
             nearest = list(self.idx.nearest(coos, 1))[0]
             return nearest
-            # min_dist = 1000000
-            # min_node = None
-            # # for (x, y) in zip(self.xs, self.ys):
-            # for i in range(self.nb_nodes):  # TODO wtf is this bs, CORRECT THIS!
-            #     x, y = self.xs[i], self.ys[i]
-            #     dist = self.rrt.metric(coos, (x, y))
-            #     if dist < min_dist:
-            #         min_dist = dist
-            #         min_node = i
-            #         # print("min_node :", i)
-            # return min_node
-
-        # def metric(self, n1, n2):
-        # return np.sqrt((n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2)
 
         def near(self, coos):
             gamma = 8
@@ -96,7 +81,7 @@ class RRT:
                 path.insert(0, self.get_node(iterator))
             print(path)
             return path
-optimize nearest neighbor, change goal threshold, change search radius, implement obstacle_free, choose more appropriately between euclidean distance and other metric
+
     def __init__(self, parent, elevation_map, start_coos, goal_cos):
         self.parent = parent
         self.map = elevation_map
@@ -189,7 +174,7 @@ optimize nearest neighbor, change goal threshold, change search radius, implemen
         return height_diff <= 0.10
 
     def steer(self, z_nearest_index, z_rand):
-        max_dist = 1  # TODO 0.5
+        max_dist = 1.5  # TODO 0.5
         z_nearest = self.T.get_node(z_nearest_index)
         distance = self.euclidean_distance(z_nearest, z_rand)
         # print("z_nearest :", z_nearest)
@@ -263,12 +248,8 @@ optimize nearest neighbor, change goal threshold, change search radius, implemen
 
         return traversed
 
-    def get_cell_height(self, coos):  # TODO change this there is a bug with the bounds somewhere in traversed_cells
+    def get_cell_height(self, coos):
         return self.map[coos[1], coos[0]]
-        # if coos[1] < 30 and coos[0] < 30:
-        #     return self.map[coos[1], coos[0]]
-        # else:
-        #     return 100000
 
     def sample(self):
         x = random.uniform(0, 1)

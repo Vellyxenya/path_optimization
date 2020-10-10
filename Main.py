@@ -9,7 +9,7 @@ import random
 from D_star import DStar
 from RRT import RRT
 import time
-
+import math
 
 class State(Enum):
     S1 = 1
@@ -35,7 +35,7 @@ class MainWindow:
         self.image = Image.open("Resources/lena.png")
         self.photo = ImageTk.PhotoImage(self.image)
         self.canvas_width = 1024
-        self.canvas_height = 800
+        self.canvas_height = 700
 
         self.canvas = Tk.Canvas(main, width=self.canvas_width, height=self.canvas_height)
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor=Tk.NW, image=self.photo)
@@ -112,9 +112,14 @@ class MainWindow:
         self.simulation_speed_slider.set(self.simulation_speed)
         self.simulation_speed_slider.pack(side=LEFT, padx=2, pady=2)
 
+        self.path_profile_width = self.canvas_width
+        self.path_profile_height = 120
+        self.path_profile = Tk.Canvas(main, bg="white", width=self.path_profile_width, height=self.path_profile_height)
+
         self.toolbar.pack(side=TOP, fill=X)
         self.slider_bar.pack(side=TOP, fill=X)
         self.canvas.pack(side=TOP)
+        self.path_profile.pack(side=TOP)
 
         self.map = np.loadtxt("my_file2.csv", delimiter=',')
         self.init_map()
@@ -243,15 +248,45 @@ class MainWindow:
         self.draw_tree(self.tree)
         if self.path:
             self.draw_branch(self.path, PathType.PATH_HISTORY)
+            self.draw_path_profile(self.path)
         else:
             print("No path found, so can't draw path branch")
 
     def run_algorithm_dstar(self):
         self.algorithm = DStar(self, self.height_visibility_map, self.start, self.end)
         self.run_algorithm()
+        self.draw_path_profile(self.path)
+
+    def draw_path_profile(self, path):
+        self.path_profile.delete("profile_line")
+        heights, distances, total_distance = self.path_to_height_profile(path)
+        ratio = self.path_profile_width/total_distance  # * 0.9
+        prev_height = heights[0]
+        prev_x = 0
+        for (height, distance) in zip(heights[:-1], distances):
+            dx = distance * ratio
+            self.path_profile.create_line(prev_x, self.path_profile_height/2-prev_height*30, prev_x+dx,
+                                          self.path_profile_height/2-height*30,
+                                          fill="black", tag="profile_line")
+            prev_height = height
+            prev_x += dx
+
+    def path_to_height_profile(self, path):
+        heights = []
+        distances = []
+        total_distance = 0.0
+        prev = None
+        for node in path:
+            if prev is not None:
+                distance = RRT.euclidean_distance(prev, node)
+                distances.append(distance)
+                total_distance += distance
+            heights.append(self.map[math.floor(node[1]), math.floor(node[0])])
+            prev = node
+        return heights, distances, total_distance
 
     def run_algorithm(self):
-        if self.algorithm == None:
+        if self.algorithm is None:
             return
         self.clear_path()
         self.path = self.algorithm.run()
@@ -327,10 +362,7 @@ class MainWindow:
         centerX0 = offset + x_0 * self.square_size
         centerY0 = offset + y_0 * self.square_size
         for node in path:
-            if path_type == PathType.PATH_TO_FOLLOW:
-                (x, y) = node.get_coos()
-            elif path_type == PathType.PATH_HISTORY:
-                (x, y) = (node[0], node[1])
+            (x, y) = (node[0], node[1])
             centerX = offset + x * self.square_size
             centerY = offset + y * self.square_size
             shape_size = max(self.square_size // 8, 1)
