@@ -19,7 +19,7 @@ class State(Enum):
 
 class Algos(Enum):
     DSTAR = 1
-    RTT = 2
+    RRT = 2
 
 
 class PathType(Enum):
@@ -34,8 +34,8 @@ class MainWindow:
     def __init__(self, main):
         self.image = Image.open("Resources/lena.png")
         self.photo = ImageTk.PhotoImage(self.image)
-        self.canvas_width = 1024
-        self.canvas_height = 700
+        self.canvas_width = 1000
+        self.canvas_height = 650
 
         self.canvas = Tk.Canvas(main, width=self.canvas_width, height=self.canvas_height)
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor=Tk.NW, image=self.photo)
@@ -48,7 +48,7 @@ class MainWindow:
         self.path = None
         self.path_history = []
         self.algorithm = None
-        self.sensor_range = 5
+        self.sensor_range = 10
         self.steps_per_cycle = self.sensor_range // 2
 
         self.menu = Tk.Menu(main)
@@ -58,13 +58,14 @@ class MainWindow:
 
         self.toolbar = Tk.Frame(main, relief=RAISED)  # bd=1,
         self.slider_bar = Tk.Frame(main, relief=RAISED)
+        self.metrics_bar = Tk.Frame(main, relief=RAISED)
 
         self.run_menu = Tk.Menu(self.menu, tearoff=0)
 
         self.run_menu.add_command(label="D*", command=self.run_algorithm_dstar)
-        self.run_menu.add_command(label="RRT", command=self.run_algorithm_rtt)
+        self.run_menu.add_command(label="RRT", command=self.run_algorithm_rrt)
         self.menu.add_cascade(label="Run Menu", menu=self.run_menu)
-        self.menu.add_command(label="Run current", command=self.run_algorithm)
+        # self.menu.add_command(label="Run current", command=self.run_algorithm)
 
         self.menu.add_command(label="Go to destination", command=self.go_to_destination)
 
@@ -99,7 +100,7 @@ class MainWindow:
         self.heuristic = 20
         self.heuristic_label = Tk.Label(self.slider_bar, text="Heuristic value :")
         self.heuristic_label.pack(side=LEFT, padx=2, pady=2)
-        self.heuristic_slider = Tk.Scale(self.slider_bar, from_=0, to=80, orient=Tk.HORIZONTAL,
+        self.heuristic_slider = Tk.Scale(self.slider_bar, from_=0, to=120, orient=Tk.HORIZONTAL,
                                          command=self.broadcast_heuristic_value)
         self.heuristic_slider.set(self.heuristic)
         self.heuristic_slider.pack(side=LEFT, padx=2, pady=2)
@@ -112,12 +113,27 @@ class MainWindow:
         self.simulation_speed_slider.set(self.simulation_speed)
         self.simulation_speed_slider.pack(side=LEFT, padx=2, pady=2)
 
+        self.path_length_label = Tk.Label(self.metrics_bar, text="Path length :")
+        self.path_length_var = Tk.StringVar()
+        self.path_length_var.set("{:.2f}".format(0))
+        self.path_length_label_value = Tk.Label(self.metrics_bar, textvariable=self.path_length_var)
+        self.path_length_label.pack(side=LEFT, padx=2, pady=2)
+        self.path_length_label_value.pack(side=LEFT, padx=2, pady=2)
+
+        self.execution_time_label = Tk.Label(self.metrics_bar, text="Execution time :")
+        self.execution_time_var = Tk.StringVar()
+        self.execution_time_var.set(0.0)
+        self.execution_time_label_value = Tk.Label(self.metrics_bar, textvariable=self.execution_time_var)
+        self.execution_time_label.pack(side=LEFT, padx=2, pady=2)
+        self.execution_time_label_value.pack(side=LEFT, padx=2, pady=2)
+
         self.path_profile_width = self.canvas_width
         self.path_profile_height = 120
         self.path_profile = Tk.Canvas(main, bg="white", width=self.path_profile_width, height=self.path_profile_height)
 
         self.toolbar.pack(side=TOP, fill=X)
         self.slider_bar.pack(side=TOP, fill=X)
+        self.metrics_bar.pack(side=TOP, fill=X)
         self.canvas.pack(side=TOP)
         self.path_profile.pack(side=TOP)
 
@@ -133,6 +149,7 @@ class MainWindow:
         self.algorithm = DStar(self, self.map, self.start, self.end)
 
         main.config(menu=self.menu)
+        print(self.canvas.winfo_width(), self.canvas.winfo_screenwidth(), self.canvas.winfo_vrootwidth())
 
     # ----------------
 
@@ -180,7 +197,6 @@ class MainWindow:
 
     def update_steps_per_cycle(self):
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         self.steps_per_cycle = self.sensor_range // 2
         print(self.steps_per_cycle)
 
@@ -197,9 +213,12 @@ class MainWindow:
     def change_goal_position(self):
         goal_x = simpledialog.askinteger("X : ", "Enter new X coordinate",
                                          parent=root, minvalue=0, maxvalue=self.map_width - 1)
-
+        if not goal_x:
+            return
         goal_y = simpledialog.askinteger("Y : ", "Enter new Y coordinate",
                                          parent=root, minvalue=0, maxvalue=self.map_height - 1)
+        if not goal_y:
+            return
         self.set_goal_position((goal_x, goal_y))
         self.draw_positions()
         self.show_current_position()
@@ -225,7 +244,7 @@ class MainWindow:
         if self.path:
             if self.current_position != self.end:
                 self.path_index += 1
-            self.current_position = self.path[self.path_index].get_coos()
+            self.current_position = self.path[self.path_index]
             self.show_current_position()
             self.update_visibility_map()
             self.path_history.append(self.current_position)
@@ -240,11 +259,14 @@ class MainWindow:
         self.canvas.create_oval(centerX - shape_size, centerY - shape_size,
                                 centerX + shape_size, centerY + shape_size, fill=color, tag="current_position")
 
-    def run_algorithm_rtt(self):
-        self.algorithm = RRT(self, self.map, self.start, self.end)
+    def run_algorithm_rrt(self):
         # TODO refactor this
         self.clear_path()
-        self.path, self.tree = self.algorithm.run(3000)  # iterations
+        start = time.time()
+        self.algorithm = RRT(self, self.map, self.start, self.end)
+        self.path, self.tree = self.algorithm.run(100)  # iterations
+        end = time.time()
+        self.execution_time_var.set("{:.3f}".format(end - start))
         self.draw_tree(self.tree)
         if self.path:
             self.draw_branch(self.path, PathType.PATH_HISTORY)
@@ -253,13 +275,23 @@ class MainWindow:
             print("No path found, so can't draw path branch")
 
     def run_algorithm_dstar(self):
+        self.clear_path()
+        start = time.time()
         self.algorithm = DStar(self, self.height_visibility_map, self.start, self.end)
-        self.run_algorithm()
+        self.path = self.algorithm.run()
+        end = time.time()
+        self.execution_time_var.set("{:.3f}".format(end - start))
+        self.path_index = -1
+        self.draw_path(self.path, PathType.PATH_TO_FOLLOW)
+        self.draw_path(self.path_history, PathType.PATH_HISTORY)
+        # self.current_position = self.start
+        self.show_current_position()
         self.draw_path_profile(self.path)
 
     def draw_path_profile(self, path):
         self.path_profile.delete("profile_line")
         heights, distances, total_distance = self.path_to_height_profile(path)
+        self.path_length_var.set("{:.2f}".format(total_distance))
         ratio = self.path_profile_width/total_distance  # * 0.9
         prev_height = heights[0]
         prev_x = 0
@@ -409,9 +441,11 @@ class MainWindow:
         print(square_x, square_y)
         self.update_map(square_x, square_y)
 
+    # By clicking on the map, the elevation of the terrain increases
     def update_map(self, x, y):
-        self.map[y, x] = 4  # TODO change this value
-        self.update_color_map()
+        # self.map[y, x] = 4  # TODO change this value
+        # self.update_color_map()
+        pass
 
     def ask_for_file(self):
         File = askopenfilename(parent=root, initialdir="./", title='Select a .csv or .png file')
@@ -442,10 +476,12 @@ class MainWindow:
     def empty_map(self):
         width = simpledialog.askinteger("Width", "Enter Map width",
                                         parent=root, minvalue=1, maxvalue=300)
-
+        if not width:
+            return
         height = simpledialog.askinteger("Height", "Enter Map height",
                                          parent=root, minvalue=1, maxvalue=300)
-
+        if not height:
+            return
         randomize = messagebox.askyesno("Question", "Random map?")
 
         self.map = np.zeros((height, width)) if not randomize else np.random.randn(height, width)
@@ -485,6 +521,7 @@ class MainWindow:
                 self.algo_state_map[i, j] = random.choice(list(State))
 
     def update_visibility_map(self):
+        # TODO add condition to update visibility_map and color map only if we are using the 'non-full-map' mode
         range_squared = self.sensor_range ** 2
         for y in range(self.map_height):
             for x in range(self.map_width):
@@ -513,11 +550,15 @@ class MainWindow:
             for j in range(self.map_width):
                 self.color_map[i, j] = self.map_height_to_color(self.height_visibility_map[i, j], extreme_value)
         image = Image.fromarray(self.color_map)
-        print("square size : ", self.square_size)
-        resized_image = image.resize((self.map_width * max(1, self.square_size), self.map_height * max(1, self.square_size)),
-                                     Image.NEAREST)
+        drawn_width = self.map_width * max(1, self.square_size)
+        drawn_height = self.map_height * max(1, self.square_size)
+        resized_image = image.resize((drawn_width, drawn_height), Image.NEAREST)
         self.photo = ImageTk.PhotoImage(resized_image)
         self.canvas.itemconfig(self.image_on_canvas, image=self.photo)
+        self.canvas.config(width=drawn_width)
+        self.canvas.config(height=drawn_height)
+        self.path_profile.config(width=drawn_width)
+        root.geometry(str(drawn_width + 200) + "x" + str(drawn_height + self.path_profile_height + 100))
 
     @staticmethod
     def map_height_to_color(height, extreme_value):

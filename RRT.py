@@ -27,7 +27,7 @@ class RRT:
             gamma = 8
             # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
             # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
-            search_radius = 2
+            search_radius = 1.8
             node_indices = list(self.idx.intersection((coos[0] - search_radius, coos[1] - search_radius,
                                                        coos[0] + search_radius, coos[1] + search_radius)))
             # print("near#node_indices :", node_indices)
@@ -122,7 +122,7 @@ class RRT:
                     # min_dist_to_goal = dist
                     print("Goal found in %d iterations" % i)
             i += 1
-            if i % 100 == 0:
+            if i % 1000 == 0:
                 print("iteration :", i)
             # self.parent.draw_tree(self.T)
         if not self.goal_found:
