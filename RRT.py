@@ -97,12 +97,12 @@ class RRT:
         self.temp_final = None
         self.heuristic = 100
 
-    def run(self, max_iter):
+    def run(self, min_iter=100, max_iter=5000):
         i = 0
         final_index = None
         min_dist_to_goal = 1000000
         near_goal_indices = []
-        while i < max_iter or not self.goal_found:
+        while (i < min_iter or not self.goal_found) and i < max_iter:
             z_rand = self.sample()
             # print("z_rand :", z_rand)
             z_nearest_index = self.T.nearest(z_rand)
@@ -188,6 +188,9 @@ class RRT:
             new_y = z_nearest[1] + max_dist * math.sin(angle)
             new_coos = (new_x, new_y)
             return new_coos
+
+    def get_name(self):
+        return "RRT*"
 
     @staticmethod
     def euclidean_distance(z1, z2):

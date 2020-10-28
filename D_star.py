@@ -92,6 +92,9 @@ class DStar:
         self.goal = self.graph[goal_coos[1]][goal_coos[0]]
         self.current_state = self.start
 
+    def get_name(self):
+        return "D*"
+
     def init_nodes(self):
         for y in range(self.height):
             for x in range(self.width):
