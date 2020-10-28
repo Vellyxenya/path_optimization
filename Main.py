@@ -32,7 +32,7 @@ class PathType(Enum):
 # ----------------------------------------------------------------------
 class MainWindow:
 
-    gui = True
+    gui = False
 
     # ----------------
     def __init__(self, main):
@@ -274,7 +274,7 @@ class MainWindow:
         self.clear_path()
         start = time.time()
         self.algorithm = RRT(self, self.map, self.start, self.end)
-        self.path, self.tree = self.algorithm.run(500)  # iterations
+        self.path, self.tree = self.algorithm.run(500, 30000)  # iterations
         end = time.time()
         self.execution_time_var.set("{:.3f}".format(end - start))
         self.draw_tree(self.tree)

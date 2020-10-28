@@ -121,7 +121,7 @@ class RRT:
                     near_goal_indices.append(z_new_index)
                     # final_index = z_new_index
                     # min_dist_to_goal = dist
-                    print("Goal found in %d iterations" % i)
+                    # print("Goal found in %d iterations" % i)
             i += 1
             if i % 1000 == 0:
                 print("iteration :", i)

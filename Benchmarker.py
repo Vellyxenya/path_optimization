@@ -32,9 +32,10 @@ class Benchmarker:
         self.goal = None
 
         # Outputs
-        self.path = None
-        self.path_length = None
         self.execution_time = None
+        self.path_length = None
+        self.path_cost = None
+        self.path = None
 
     def run(self):
         print("\n=== Running benchmark ===\n")
@@ -57,7 +58,7 @@ class Benchmarker:
             self.write_conclusion()
 
         print("=== Benchmark finished ===")
-        print("=== See results in :", self.output_file_name)
+        print("=== See results in : output/" + self.output_file_name)
         cmd = "gedit output/" + self.output_file_name
         os.system(cmd)
 
@@ -89,7 +90,7 @@ class Benchmarker:
 
     def write_conclusion(self):
         f = open("output/" + self.output_file_name, 'a')
-        f.write("\nAlgo X is better than algo Y\n")
+        # f.write("\nAlgo ... is better than algo ...\n")
         f.write("=======================================\n\n")
         f.close()
 
@@ -101,6 +102,7 @@ class Benchmarker:
         else:
             f.write("\tExecution time : " + str(self.execution_time) + "\n")
             f.write("\tPath length : " + str(self.path_length) + "\n")
+            f.write("\tPath cost : " + str(self.path_cost) + "\n")
             # f.write("\tPath : " + str(self.path) + "\n")
         f.close()
 
@@ -108,9 +110,13 @@ class Benchmarker:
         if not path:
             self.path_length = -1
             return
-        _, _, self.path_length = self.path_to_height_profile(path)
+        heights, distances, self.path_length = self.get_path_metrics(path)
+        print(len(heights), len(distances))
+        self.path_cost = 0
+        for i, distance in enumerate(distances):
+            self.path_cost += distance * (1 + abs(heights[i] - heights[i+1]))  # TODO make path cost more realistic
 
-    def path_to_height_profile(self, path):
+    def get_path_metrics(self, path):
         heights = []
         distances = []
         total_distance = 0.0

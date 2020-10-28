@@ -128,7 +128,7 @@ class DStar:
         if not self.path:
             print("No path found\n")
             return None
-        self.print_path()
+        # self.print_path()
         return self.nodes_as_coos(self.path)
         # Re-planning
         # while self.current_state != self.goal:
@@ -153,7 +153,7 @@ class DStar:
     def print_path(self):
         for node in self.path:
             (x, y) = node.get_coos()
-            print("--> (%s, %s)"%(x,y), end='')
+            print(" --> (%s, %s)"%(x,y), end='')
         print("\n")
 
     # modify costs based on sensors

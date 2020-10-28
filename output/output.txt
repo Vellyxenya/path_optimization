@@ -4,13 +4,13 @@ Start point : (1, 1)
 Goal point : (8, 8)
 
 Algorithm : D*
-	Execution time : 0.0033762454986572266
-	Path length : 9.656854249492381
+	Execution time : 0.0032613277435302734
+	Path length : 9.65685424949238
+	Path cost : 9.65685424949238
 Algorithm : RRT*
-	Execution time : 0.2858750820159912
-	Path length : 9.126290682389751
-
-Algo X is better than algo Y
+	Execution time : 0.26405906677246094
+	Path length : 9.943097497962935
+	Path cost : 9.943097497962935
 =======================================
 
 File : map1.csv
@@ -19,12 +19,11 @@ Start point : (1, 1)
 Goal point : (20, 20)
 
 Algorithm : D*
-	Execution time : 0.017790555953979492
+	Execution time : 0.01680755615234375
 	Path length : 33.72792206135786
+	Path cost : 35.337591906041666
 Algorithm : RRT*
 	No path found
-
-Algo X is better than algo Y
 =======================================
 
 File : map2.csv
@@ -33,12 +32,13 @@ Start point : (1, 1)
 Goal point : (20, 20)
 
 Algorithm : D*
-	Execution time : 0.01699209213256836
+	Execution time : 0.0172274112701416
 	Path length : 30.142135623730955
+	Path cost : 31.91813230278837
 Algorithm : RRT*
-	No path found
-
-Algo X is better than algo Y
+	Execution time : 0.5833091735839844
+	Path length : 40.35509755009289
+	Path cost : 44.34707100565023
 =======================================
 
 File : map3.csv
@@ -47,12 +47,12 @@ Start point : (1, 1)
 Goal point : (20, 20)
 
 Algorithm : D*
-	Execution time : 0.017357587814331055
+	Execution time : 0.017267227172851562
 	Path length : 34.31370849898477
+	Path cost : 35.2035566883483
 Algorithm : RRT*
-	Execution time : 0.10870742797851562
-	Path length : 42.28277070518895
-
-Algo X is better than algo Y
+	Execution time : 0.335496187210083
+	Path length : 41.67497654008552
+	Path cost : 44.15521265205925
 =======================================
 
