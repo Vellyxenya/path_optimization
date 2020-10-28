@@ -72,14 +72,15 @@ class RRT:
             self.nb_nodes += 1
             return self.nb_nodes - 1
 
-        def reconstruct_path(self, final_index):
+        def reconstruct_path(self, final_index, goal):
             path = []
             iterator = final_index
             path.append(self.get_node(iterator))
             while iterator != 0:
                 iterator = self.parents[iterator]
                 path.insert(0, self.get_node(iterator))
-            print(path)
+            # print(path)
+            path.append(goal)
             return path
 
     def __init__(self, parent, elevation_map, start_coos, goal_cos):
@@ -137,7 +138,7 @@ class RRT:
                     min_path_cost = path_cost
                     best_index = node_index
             print("PATH COST :", min_path_cost)
-            path = self.T.reconstruct_path(best_index)
+            path = self.T.reconstruct_path(best_index, self.goal)
             return path, self.T
 
     def is_goal_reached(self, z_new):

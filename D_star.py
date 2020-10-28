@@ -247,5 +247,4 @@ class DStar:
         while node_iterator != self.goal:
             node_iterator = node_iterator.get_back_pointer()
             path.append(node_iterator)
-        path.append(node_iterator)
         return path
