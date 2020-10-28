@@ -78,21 +78,19 @@ class DStar:
         RAISE = 3
         LOWER = 4
 
-    def __init__(self, parent, elevation_map, start_coos, goal_coos):
+    def __init__(self, parent, elevation_map, start_coos, goal_coos, heuristic=20):
         self.queue = []
         self.map = elevation_map
         self.path = []
         self.height, self.width = self.map.shape
         self.graph = copy.deepcopy(self.map)
         self.graph = np.empty([self.height, self.width], dtype=DStar.Node)
-        self.heuristic = int(parent.get_heuristic())
+        # self.heuristic = int(parent.get_heuristic())
+        self.heuristic = heuristic
         self.init_nodes()
         self.start = self.graph[start_coos[1]][start_coos[0]]
         self.goal = self.graph[goal_coos[1]][goal_coos[0]]
         self.current_state = self.start
-
-    # how much we penalize taking high cost environment paths
-    #heuristic = 20
 
     def init_nodes(self):
         for y in range(self.height):

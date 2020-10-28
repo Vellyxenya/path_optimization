@@ -10,6 +10,8 @@ from D_star import DStar
 from RRT import RRT
 import time
 import math
+from Benchmarker import Benchmarker
+
 
 class State(Enum):
     S1 = 1
@@ -30,8 +32,15 @@ class PathType(Enum):
 # ----------------------------------------------------------------------
 class MainWindow:
 
+    gui = False
+
     # ----------------
     def __init__(self, main):
+        if not self.gui:
+            benchmark = Benchmarker()
+            benchmark.run()
+            main.destroy()
+            return
         self.image = Image.open("Resources/lena.png")
         self.photo = ImageTk.PhotoImage(self.image)
         self.canvas_width = 1000
@@ -177,6 +186,7 @@ class MainWindow:
                 self.menu.update()  # necessary otherwise canvas does not update since the call comes from a menu 'command='
                 sleep_time = (2.0 / int(self.simulation_speed))
                 # time.sleep(sleep_time)
+        self.draw_path_profile(self.path)
         self.is_simulation_running = False
 
     def broadcast_heuristic_value(self, value):
