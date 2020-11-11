@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import math
 import os
+import matplotlib.pyplot as plt
 
 
 class Benchmarker:
@@ -17,12 +18,19 @@ class Benchmarker:
 
         # Maps
         maze_maps = ["maze1.csv"]
-        easy_maps = ["map1.csv", "map2.csv", "map3.csv"]
-        mars_different_size_maps = ["mars/small.png", "mars/medium.png", "mars/big.png"]
-        medium_maps = ["medium_deimos.png", "medium_mars.png", "medium_phobos.png"]
-        big_maps = ["big_deimos.png", "big_mars.png", "big_phobos.png"]
-        other_maps = ["the_valley.png", "hills.png"]
-        self.dataset = maze_maps + easy_maps # + mars_different_size_maps + medium_maps + big_maps + other_maps
+
+        small_maps = ["map1.csv"]  # , "map2.csv", "map3.csv"]
+        small_maps_labels = ["(22x22)"]  # , "(22x22)_2", "(22x22)_3"]
+
+        medium_maps = ["the_valley.png", "small_mars.png", "hills.png", "medium_deimos.png", "medium_phobos.png", "medium_mars.png"]
+        medium_maps_labels = ["(200x100)", "(256x125)", "(257x257)", "(400x200)", "(500x250)", "(600x300)"]
+        # 20000, 32000, 66049, 80000, 125000, 180000
+
+        big_maps = ["big_mars.png", "big_deimos.png"]  # , "big_phobos.png"]
+        big_maps_labels = ["(1000x500)", "(1200x600)"]  # , "(1400x700)"]
+
+        self.dataset = medium_maps + big_maps # + mars_different_size_maps + medium_maps + big_maps + other_maps
+        self.dataset_labels = medium_maps_labels + big_maps_labels
 
         # Inputs
         self.map = None
@@ -36,6 +44,13 @@ class Benchmarker:
         self.path_length = None
         self.path_cost = None
         self.path = None
+        self.exec_times_d_star = []
+        self.exec_times_rrt_star = []
+        self.path_lengths_d_star = []
+        self.path_lengths_rrt_star = []
+        self.path_costs_d_star = []
+        self.path_costs_rrt_star = []
+        self.map_sizes = []
 
     def run(self):
         print("\n=== Running benchmark ===\n")
@@ -60,9 +75,54 @@ class Benchmarker:
         print("=== Benchmark finished ===")
         print("=== See results in : output/" + self.output_file_name)
         cmd = "gedit output/" + self.output_file_name
+        self.plot_results()
         os.system(cmd)
 
+    def plot_results(self):
+        # Plot execution times
+        plt.plot(self.map_sizes, self.exec_times_d_star, label="A*")
+        plt.plot(self.map_sizes, self.exec_times_rrt_star, label="RRT*")
+
+        plt.xticks(self.map_sizes, rotation=30)
+        plt.axes().set_xticklabels(self.dataset_labels)
+
+        plt.xlabel('map sizes (number of cells)')
+        plt.ylabel('execution time (sec)')
+        plt.title('A* and RRT* execution times')
+        plt.legend()
+        plt.savefig('execution_time_plot.png')
+        plt.show()
+
+        # Plot path lengths
+        plt.plot(self.map_sizes, self.path_lengths_d_star, label="A*")
+        plt.plot(self.map_sizes, self.path_lengths_rrt_star, label="RRT*")
+
+        plt.xticks(self.map_sizes, rotation=35)
+        plt.axes().set_xticklabels(self.dataset_labels)
+
+        plt.xlabel('map sizes (number of cells)')
+        plt.ylabel('path length')
+        plt.title('A* and RRT* path lengths')
+        plt.legend()
+        plt.savefig('path_length_plot.png')
+        plt.show()
+
+        # Plot path costs
+        plt.plot(self.map_sizes, self.path_costs_d_star, label="A*")
+        plt.plot(self.map_sizes, self.path_costs_rrt_star, label="RRT*")
+
+        plt.xticks(self.map_sizes, rotation=35)
+        plt.axes().set_xticklabels(self.dataset_labels)
+
+        plt.xlabel('map sizes (number of cells)')
+        plt.ylabel('path cost')
+        plt.title('A* and RRT* path costs')
+        plt.legend()
+        plt.savefig('path_cost_plot.png')
+        plt.show()
+
     def benchmark(self, algorithm_name):
+        width, height = self.map.shape
         if algorithm_name == "D*":
             time_start = time.time()
             self.algorithm = DStar(self, self.map, self.start, self.goal)
@@ -71,7 +131,7 @@ class Benchmarker:
         elif algorithm_name == "RRT*":
             time_start = time.time()
             self.algorithm = RRT(self, self.map, self.start, self.goal)
-            self.path, _ = self.algorithm.run(500, 3000)
+            self.path, _ = self.algorithm.run(500, width*height*2)
             time_end = time.time()
         else:
             print("Unknown algorithm")
@@ -79,6 +139,14 @@ class Benchmarker:
 
         self.execution_time = time_end - time_start
         self.analyze(self.path)
+        if algorithm_name == "D*":
+            self.exec_times_d_star.append(self.execution_time)
+            self.path_lengths_d_star.append(self.path_length)
+            self.path_costs_d_star.append(self.path_cost)
+        elif algorithm_name == "RRT*":
+            self.exec_times_rrt_star.append(self.execution_time)
+            self.path_lengths_rrt_star.append(self.path_length)
+            self.path_costs_rrt_star.append(self.path_cost)
 
     def write_setup(self, input_file_name, write_mode):
         f = open("output/" + self.output_file_name, write_mode)
@@ -114,7 +182,8 @@ class Benchmarker:
         print(len(heights), len(distances))
         self.path_cost = 0
         for i, distance in enumerate(distances):
-            self.path_cost += distance * (1 + abs(heights[i] - heights[i+1]))  # TODO make path cost more realistic
+            height_diff = abs(heights[i] - heights[i+1])
+            self.path_cost += distance * (1 + height_diff)**3  # TODO make path cost more realistic
 
     def get_path_metrics(self, path):
         heights = []
@@ -162,4 +231,5 @@ class Benchmarker:
 
         self.start = (1, 1)
         self.goal = (self.dimensions[1] - 2, self.dimensions[0] - 2)
+        self.map_sizes.append(self.dimensions[1] * self.dimensions[0])
         return True

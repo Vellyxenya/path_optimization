@@ -1,58 +1,120 @@
-File : maze1.csv
-Map size : (10 x 10)
+File : the_valley.png
+Map size : (200 x 100)
 Start point : (1, 1)
-Goal point : (8, 8)
+Goal point : (198, 98)
 
 Algorithm : D*
-	Execution time : 0.0032613277435302734
-	Path length : 9.65685424949238
-	Path cost : 9.65685424949238
+	Execution time : 0.7869477272033691
+	Path length : 265.27922061357907
+	Path cost : 282.70941783886724
 Algorithm : RRT*
-	Execution time : 0.26405906677246094
-	Path length : 9.943097497962935
-	Path cost : 9.943097497962935
+	Execution time : 0.8625917434692383
+	Path length : 360.74703177525737
+	Path cost : 443.87040821242925
 =======================================
 
-File : map1.csv
-Map size : (22 x 22)
+File : small_mars.png
+Map size : (256 x 125)
 Start point : (1, 1)
-Goal point : (20, 20)
+Goal point : (254, 123)
 
 Algorithm : D*
-	Execution time : 0.01680755615234375
-	Path length : 33.72792206135786
-	Path cost : 35.337591906041666
+	Execution time : 1.1978731155395508
+	Path length : 312.6639969244294
+	Path cost : 321.1296869206262
 Algorithm : RRT*
-	No path found
+	Execution time : 1.6508309841156006
+	Path length : 376.3900296127556
+	Path cost : 430.89240890486894
 =======================================
 
-File : map2.csv
-Map size : (22 x 22)
+File : hills.png
+Map size : (257 x 257)
 Start point : (1, 1)
-Goal point : (20, 20)
+Goal point : (255, 255)
 
 Algorithm : D*
-	Execution time : 0.0172274112701416
-	Path length : 30.142135623730955
-	Path cost : 31.91813230278837
+	Execution time : 2.5345096588134766
+	Path length : 410.00209204105437
+	Path cost : 423.05398653301484
 Algorithm : RRT*
-	Execution time : 0.5833091735839844
-	Path length : 40.35509755009289
-	Path cost : 44.34707100565023
+	Execution time : 2.4497244358062744
+	Path length : 452.9794884383425
+	Path cost : 528.6039355789401
 =======================================
 
-File : map3.csv
-Map size : (22 x 22)
+File : medium_deimos.png
+Map size : (400 x 200)
 Start point : (1, 1)
-Goal point : (20, 20)
+Goal point : (398, 198)
 
 Algorithm : D*
-	Execution time : 0.017267227172851562
-	Path length : 34.31370849898477
-	Path cost : 35.2035566883483
+	Execution time : 3.1384072303771973
+	Path length : 504.13203435596563
+	Path cost : 518.450653856374
 Algorithm : RRT*
-	Execution time : 0.335496187210083
-	Path length : 41.67497654008552
-	Path cost : 44.15521265205925
+	Execution time : 3.5137975215911865
+	Path length : 601.8505460350733
+	Path cost : 683.4171961096656
+=======================================
+
+File : medium_phobos.png
+Map size : (500 x 250)
+Start point : (1, 1)
+Goal point : (498, 248)
+
+Algorithm : D*
+	Execution time : 4.716692686080933
+	Path length : 619.0559159102177
+	Path cost : 632.6663103719405
+Algorithm : RRT*
+	Execution time : 3.6208982467651367
+	Path length : 640.3411815307738
+	Path cost : 732.9119120042192
+=======================================
+
+File : medium_mars.png
+Map size : (600 x 300)
+Start point : (1, 1)
+Goal point : (598, 298)
+
+Algorithm : D*
+	Execution time : 6.5410614013671875
+	Path length : 737.1808075912461
+	Path cost : 749.1570095555122
+Algorithm : RRT*
+	Execution time : 8.148573398590088
+	Path length : 804.3860735837975
+	Path cost : 876.4737475384923
+=======================================
+
+File : big_mars.png
+Map size : (1000 x 500)
+Start point : (1, 1)
+Goal point : (998, 498)
+
+Algorithm : D*
+	Execution time : 19.49377942085266
+	Path length : 1202.4499269370601
+	Path cost : 1209.4190093109835
+Algorithm : RRT*
+	Execution time : 25.929889917373657
+	Path length : 1289.7562601352035
+	Path cost : 1337.4757775629844
+=======================================
+
+File : big_deimos.png
+Map size : (1200 x 600)
+Start point : (1, 1)
+Goal point : (1198, 598)
+
+Algorithm : D*
+	Execution time : 28.20153284072876
+	Path length : 1455.8296526140282
+	Path cost : 1478.1000193962868
+Algorithm : RRT*
+	Execution time : 32.61375546455383
+	Path length : 1560.8188990077072
+	Path cost : 1692.1087237970055
 =======================================
 

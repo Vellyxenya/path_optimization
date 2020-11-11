@@ -25,9 +25,8 @@ class RRT:
 
         def near(self, coos):
             gamma = 8
-            # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
-            # search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
-            search_radius = 1.8
+            search_radius = gamma * math.sqrt(math.log(self.nb_nodes) ** 2 / self.nb_nodes)
+            # search_radius = 1.8
             node_indices = list(self.idx.intersection((coos[0] - search_radius, coos[1] - search_radius,
                                                        coos[0] + search_radius, coos[1] + search_radius)))
             # print("near#node_indices :", node_indices)
@@ -123,8 +122,8 @@ class RRT:
                     # min_dist_to_goal = dist
                     # print("Goal found in %d iterations" % i)
             i += 1
-            if i % 1000 == 0:
-                print("iteration :", i)
+            # if i % 1000 == 0:
+            #     print("iteration :", i)
             # self.parent.draw_tree(self.T)
         if not self.goal_found:
             print("Terminated without finding goal")
@@ -172,7 +171,7 @@ class RRT:
         z_new_cell = (math.floor(z_new[0]), math.floor(z_new[1]))
         height_diff = abs(self.get_cell_height(z_nearest_cell) - self.get_cell_height(z_new_cell))
         # print("height_diff : ", height_diff)
-        return height_diff <= 0.10
+        return height_diff <= 0.14
 
     def steer(self, z_nearest_index, z_rand):
         max_dist = 1.5  # TODO 0.5
